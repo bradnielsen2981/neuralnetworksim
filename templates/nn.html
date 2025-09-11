@@ -1,0 +1,26 @@
+<div class="nn-controls-row">
+    <h4>Model</h4>
+    <div class="controls">
+        <label>Hidden Layers (1–4): <input class="centre" type="number" id="layers" min="1" max="4" value="1"></label>
+        <label>Activation:
+            <select id="activation">
+                <option value="relu">ReLU</option>
+                <option value="sigmoid">Sigmoid</option>
+                <option value="tanh">TanH</option>
+            </select>
+        </label>
+        <label>Initialization:
+            <select id="initialization">
+                <option value="glorot">Glorot</option>
+                <option value="standard">Standard</option>
+                <option value="random">Random</option>
+            </select>
+        </label>
+        <button id="resetButton">Reset</button>
+        <button id="trainButton">Train</button>
+    </div>
+</div>
+
+<div id="canvasContainer">
+    <canvas id="networkCanvas" width="900" height="460"></canvas>
+</div>
