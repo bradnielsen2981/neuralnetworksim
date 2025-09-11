@@ -16,7 +16,7 @@
     rel="stylesheet">
 
 <link rel="stylesheet" href="static/custom.css">
-
+ 
   
 </head>
 <body class="bg-light">
@@ -42,57 +42,38 @@
   </div>
 
   <!-- ROW 2: 3D container & points table + form -->
-  <div class="row mb-3">
-    <div class="col-md-8">
-      <div id="three-container"></div>
-      {% include 'nn.html' %}
+  <div class="row mb-3" style="height: 500px;">
+    <div class="col-md-8 h-100 d-flex flex-column">
+      <div id="three-container" class="flex-grow-1 bg-white border rounded" style="min-height: 100%;"></div>
     </div>
 
-    <div class="col-md-4 d-flex flex-column">
-      <!-- Points Table -->
-      <div id="points-table-container">
-        <table class="table table-striped table-hover table-sm mt-0">
-          <thead class="table-dark">
-            <tr>
-              <th scope="col">X</th>
-              <th scope="col">Z</th>
-              <th scope="col" id="y-label">Y</th>
-            </tr>
-          </thead>
-          <tbody id="points-table-body">
-            <!-- Initially empty -->
-          </tbody>
-        </table>
+    <div class="col-md-4 h-100 d-flex flex-column">
+      <div class="card p-0" style="border-radius:0;">
+        <div id="points-table-container">
+          <table class="table table-striped table-hover table-sm mt-0 mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th scope="col">X</th>
+                <th scope="col">Z</th>
+                <th scope="col" id="y-label">Y</th>
+              </tr>
+            </thead>
+            <tbody id="points-table-body">
+              <!-- Initially empty -->
+            </tbody>
+          </table>
+        </div>
       </div>
-
       <!-- Neural Network Parameters Form -->
       <div id="nn-parameters">
-        <h4><i class="fa-solid fa-sliders"></i> Neural Network Parameters</h4>
-        <form id="nn-parameters-form" class="mt-2">
-          <div class="mb-2">
-            <label for="lossfunction" class="form-label">Loss Function</label>
-            <input type="text" id="lossfunction" class="form-control" value="Mean Squared Error" readonly>
-          </div>
-          <div class="mb-2">
-            <label for="speed" class="form-label">Speed(s) per epoch</label>
-            <input type="number" id="speed" class="form-control" value="1">
-          </div>
-          <div class="mb-2">
-            <label for="learning-rate" class="form-label">Learning Rate</label>
-            <input type="number" id="learning-rate" class="form-control" step="0.001" value="0.01">
-          </div>
-          <div class="mb-2">
-            <label for="momentum" class="form-label">Momentum</label>
-            <input type="number" id="momentum" class="form-control" step="0.01" value="0.9">
-          </div>
-          <div class="mb-2">
-            <label for="epochs" class="form-label">Epochs</label>
-            <input type="number" id="epochs" class="form-control" value="100">
-          </div>
-          <button type="button" id="train-btn" class="btn btn-primary mt-2 w-100">Train</button>
-        </form>
+        
       </div>
     </div>
+  </div>
+
+  <!-- NN HTML outside the Bootstrap columns, but inside a row -->
+  <div class="row mb-3">
+    {% include 'nn.html' %}
   </div>
 
 </div>

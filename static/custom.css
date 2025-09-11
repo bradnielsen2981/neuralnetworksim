@@ -4,8 +4,9 @@ body, html {
   margin: 0;
   font-family: sans-serif;
   padding:20px;
+  padding-top:10px;
 }
-
+ 
 /* App container layout */
 #app-container {
   display: flex;
@@ -36,10 +37,30 @@ body, html {
 
 /* Points table container */
 #points-table-container {
-  min-height: 100px;
-  max-height: 500px;
+  height: 500px;
   overflow-y: auto;
-  margin-bottom: 10px;
+}
+
+/* Remove rounded corners from all Bootstrap cards */
+.card {
+  border:#aaa solid 1px;
+  border-radius: 0 !important;
+}
+
+.card-header {
+  padding:10px;
+}
+
+.card-body {
+  padding-top:5px;
+}
+
+.nnheading {
+  margin-top:2px;
+  margin-bottom:5px;
+  margin-left:6px;
+  display:block;
+  font-weight:600;
 }
 
 /* Table cell alignment */
@@ -61,6 +82,8 @@ img.nn-diagram {
   margin-top: 15px;
 }
 
+
+
 /* Neural network form below table */
 #nn-parameters {
   flex-grow: 1;
@@ -68,9 +91,21 @@ img.nn-diagram {
   flex-direction: column;
 }
 
-#nn-parameters form {
-  flex-grow: 1;
-  overflow: hidden; /* prevents scroll inside form */
+form#nn-parameters-form {
+    height: 455px;
+}
+
+.container-fluid.py-4 {
+    margin-top: 0px;
+    padding-top: 8px !important;
+}
+
+.container-fluid.py-3 {
+    padding-top: 5px !important;
+}
+
+#nn-parameters .card-body {
+  height:480px;
 }
 
 .points {
@@ -102,12 +137,13 @@ img.nn-diagram {
 
 /* Updated controls class to use flexbox for horizontal centering */
 .controls { 
-  margin-top: 20px; 
-  margin-bottom: 10px; 
   display: flex;
-  justify-content: center;
+  justify-content: space-between; /* Evenly space all controls */
   align-items: center;
-  gap: 15px;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 /* Specific styling for labels and inputs within controls */
@@ -153,15 +189,20 @@ img.nn-diagram {
 #resetButton {
   padding: 5px 10px;
   cursor: pointer;
-  border: 1px solid #999;
+  border: 1px solid #007bff;
   border-radius: 5px;
-  background-color: #f0f0f0;
+  background-color: #007bff !important;
+  color: #fff !important;
+  transition: background 0.2s;
+}
+#resetButton:hover {
+  background-color: #0056b3 !important;
+  border-color: #0056b3;
 }
 
 
 .nn-controls-row {
-  display: flex;
-  gap: 20px; /* Space between the heading and controls */
+  gap: 10px; /* Space between the heading and controls */
 }
 
 .nn-controls-row h4 {
@@ -171,7 +212,13 @@ img.nn-diagram {
 .controls {
     /* Existing styles, just ensure margins and paddings are suitable */
     margin: 0;
-    display: flex;
+    /*display: flex;*/
     align-items: center;
     gap: 15px;
+    font-size:1rem;
+}
+
+h4 {
+  padding:0px;
+  font-size:1.2rem;
 }

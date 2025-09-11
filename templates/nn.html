@@ -1,26 +1,89 @@
-<div class="nn-controls-row">
-    <h4>Model</h4>
-    <div class="controls">
-        <label>Hidden Layers (1–4): <input class="centre" type="number" id="layers" min="1" max="4" value="1"></label>
-        <label>Activation:
-            <select id="activation">
-                <option value="relu">ReLU</option>
-                <option value="sigmoid">Sigmoid</option>
-                <option value="tanh">TanH</option>
-            </select>
-        </label>
-        <label>Initialization:
-            <select id="initialization">
-                <option value="glorot">Glorot</option>
-                <option value="standard">Standard</option>
-                <option value="random">Random</option>
-            </select>
-        </label>
-        <button id="resetButton">Reset</button>
-        <button id="trainButton">Train</button>
+<div class="container-fluid py-4">
+  <div class="row">
+    <!-- Left: Canvas (2/3 width) -->
+    <div class="col-md-8 mb-4">
+      <div class="card">
+        <div class="card-header">
+          <div class="nn-controls-row ">
+            <div class="controls">
+              <span class="nnheading">Model</span>
+              <label>Hidden Layers: <input class="centre" type="number" id="layers" min="1" max="4" value="1"></label>
+              <label>Activation:
+                <select id="activation">
+                  <option value="relu">ReLU</option>
+                  <option value="sigmoid">Sigmoid</option>
+                  <option value="tanh">TanH</option>
+                </select>
+              </label>
+              <label>Initialization:
+                <select id="initialization">
+                  <option value="glorot">Glorot</option>
+                  <option value="standard">Standard</option>
+                  <option value="random">Random</option>
+                </select>
+              </label>
+              <button id="resetButton" class="btn btn-primary btn-sm">Reset</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          
+          <div id="canvasContainer">
+            <canvas id="networkCanvas" style="width:100%;height:460px;max-width:100%;border:1px solid #ccc;border-radius:4px;background:#fff;"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
+    <!-- Right: Neural Network Parameters Form (1/3 width) -->
+    <div class="col-md-4">
+      <div class="card neural-network-card">
+        <div class="card-header">
+          <span class="nnheading"><i class="fa-solid fa-sliders"></i> Neural Network Parameters</span>
+        </div>
+        <div class="card-body">
+          <form id="nn-parameters-form" class="mt-2">
+            <div class="mb-2">
+              <label for="lossfunction" class="form-label">Loss Function</label>
+              <input type="text" id="lossfunction" class="form-control" value="Mean Squared Error" readonly>
+            </div>
+            <div class="mb-2">
+              <label for="speed" class="form-label">Speed(s) per epoch</label>
+              <input type="number" id="speed" class="form-control" value="1">
+            </div>
+            <div class="mb-2">
+              <label for="learning-rate" class="form-label">Learning Rate</label>
+              <input type="number" id="learning-rate" class="form-control" step="0.001" value="0.01">
+            </div>
+            <div class="mb-2">
+              <label for="momentum" class="form-label">Momentum</label>
+              <input type="number" id="momentum" class="form-control" step="0.01" value="0.9">
+            </div>
+            <div class="mb-2">
+              <label for="epochs" class="form-label">Epochs</label>
+              <input type="number" id="epochs" class="form-control" value="100">
+            </div>
+            <button type="button" id="train-btn" class="btn btn-primary mt-2 w-100">Train</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id="canvasContainer">
-    <canvas id="networkCanvas" width="900" height="460"></canvas>
-</div>
+<script>
+// Place this in your JS file that handles the canvas drawing
+function resizeCanvas() {
+  const canvas = document.getElementById('networkCanvas');
+  const container = document.getElementById('canvasContainer');
+  // Set canvas width/height to container's size (in device pixels)
+  canvas.width = container.clientWidth;
+  canvas.height = 460; // or container.clientHeight if you want dynamic height
+  // Redraw your network here after resizing!
+}
+
+// Initial resize
+resizeCanvas();
+
+// Resize on window resize
+window.addEventListener('resize', resizeCanvas);
+</script>
