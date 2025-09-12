@@ -47,10 +47,6 @@
               <input type="text" id="lossfunction" class="form-control" value="Mean Squared Error" readonly>
             </div>
             <div class="mb-2">
-              <label for="speed" class="form-label">Speed(s) per epoch</label>
-              <input type="number" id="speed" class="form-control" value="1">
-            </div>
-            <div class="mb-2">
               <label for="learning-rate" class="form-label">Learning Rate</label>
               <input type="number" id="learning-rate" class="form-control" step="0.001" value="0.01">
             </div>
@@ -61,6 +57,10 @@
             <div class="mb-2">
               <label for="epochs" class="form-label">Epochs</label>
               <input type="number" id="epochs" class="form-control" value="100">
+            </div>
+            <div class="mb-2">
+              <label for="earlystopping" class="form-label">Early Stopping</label>
+              <input type="number" id="earlystopping" class="form-control" value="0.01">
             </div>
             <button type="button" id="train-btn" class="btn btn-primary mt-2 w-100">Train</button>
           </form>
@@ -87,3 +87,5 @@ resizeCanvas();
 // Resize on window resize
 window.addEventListener('resize', resizeCanvas);
 </script>
+
+<script type="module" src="static/nncalc.js"></script>

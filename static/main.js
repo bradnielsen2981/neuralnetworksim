@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'orbitcontrols';
-
+ 
 // Get the container for the Three.js scene
 const container = document.getElementById('three-container');
  
@@ -90,7 +90,8 @@ function onMouseMove(event) {
         const snappedX = snapToGrid(point.x);
         const snappedZ = snapToGrid(point.z);
 
-        hoverSphere.position.set(snappedX, 0.25, snappedZ);
+        // Center the sphere at the grid point (Y = 0)
+        hoverSphere.position.set(snappedX, 0, snappedZ);
         hoverSphere.visible = true;
     } else {
         hoverSphere.visible = false;
@@ -136,6 +137,11 @@ colorModeSelectorElement.addEventListener('click', (e) => {
         // Highlight selected
         document.querySelectorAll('.color-btn').forEach(btn => btn.style.outline = '');
         e.target.style.outline = '3px solid #222';
+
+        // Change hoverSphere color to match selected color in classification mode
+        if (!regressionMode) {
+            hoverSphere.material.color.setHex(colorMap[selectedColor]);
+        }
     }
 });
 
@@ -167,12 +173,14 @@ function renderPointsTable() {
             pointsTableBody.appendChild(row);
         });
     }
+    window.points = points; // <-- Add this line
 }
 
-// Helper to update table headers and label
+// Show/hide the button based on mode
 function updateModeUI() {
     if (regressionMode) {
-        pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points';
+        pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points ' +
+            '<button id="generate-random-btn" class="btn btn-sm btn-secondary ms-2">Generate 20 Random Points</button>';
         pointsTableHead.innerHTML = `
             <tr>
                 <th scope="col">X</th>
@@ -181,6 +189,11 @@ function updateModeUI() {
             </tr>
         `;
         colorModeSelector.style.display = 'none';
+        hoverSphere.material.color.setHex(0x00ff00);
+        // Re-attach event listener after replacing innerHTML
+        setTimeout(() => {
+            document.getElementById('generate-random-btn').onclick = generateRandomPoints;
+        }, 0);
     } else {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Classification Points';
         pointsTableHead.innerHTML = `
@@ -192,7 +205,35 @@ function updateModeUI() {
             </tr>
         `;
         colorModeSelector.style.display = '';
+        hoverSphere.material.color.setHex(colorMap[selectedColor]);
     }
+    renderPointsTable();
+}
+
+// Generate 20 random regression points and add to scene/table
+function generateRandomPoints() {
+    // Remove any spheres previously added (except hoverSphere)
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    points.length = 0; // Clear points array
+
+    for (let i = 0; i < 20; i++) {
+        const x = Math.random() * 40 - 20; // -20 <= x <= 20
+        const z = Math.random() * 40 - 20; // -20 <= z <= 20
+        const y = Math.random() * 10 - 5;  // -5 <= y <= 5
+
+        // Add to points array
+        points.push({ x, y, z });
+
+        // Add sphere to scene
+        const sphereGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+        const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.set(x, y, z);
+        scene.add(sphere);
+    }
+    window.points = points; // <-- Add this line
     renderPointsTable();
 }
 
@@ -240,7 +281,8 @@ function onClick(event) {
     }
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
     // initial Y set slightly above ground so it's visible
-    sphere.position.set(hoverSphere.position.x, 0.35, hoverSphere.position.z);
+    // Center the sphere at the grid point (Y = 0.0)
+    sphere.position.set(hoverSphere.position.x, 0, hoverSphere.position.z);
     scene.add(sphere);
 
     // set state for vertical adjustment
