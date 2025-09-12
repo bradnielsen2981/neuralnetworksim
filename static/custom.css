@@ -113,7 +113,8 @@ form#nn-parameters-form {
 }
 
 #mode-toggle {
-  margin-top: 46px !important;
+  margin-top: 6px !important;
+  margin-bottom:16px;
 }
 
 .top-row {
@@ -221,4 +222,14 @@ form#nn-parameters-form {
 h4 {
   padding:0px;
   font-size:1.2rem;
+}
+
+.color-btn {
+    height: 20px !important;
+    min-width: 20px;
+    border-radius: 3px;
+    border: none;
+    margin-right: 8px;
+    cursor: pointer;
+    vertical-align: middle;
 }
