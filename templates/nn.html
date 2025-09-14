@@ -3,8 +3,8 @@
     <!-- Left: Canvas (2/3 width) -->
     <div class="col-md-8 mb-4">
       <div class="card">
-        <div class="card-header">
-          <div class="nn-controls-row ">
+        <div class="card-header neural-network-header">
+          <div class="nn-controls-row">
             <div class="controls">
               <span class="nnheading">Model</span>
               <label>Hidden Layers: <input class="centre" type="number" id="layers" min="1" max="4" value="1"></label>
@@ -26,10 +26,10 @@
             </div>
           </div>
         </div>
-        <div class="card-body">
+        <div class="card-body neural-network-body">
           
           <div id="canvasContainer">
-            <canvas id="networkCanvas" style="width:100%;height:460px;max-width:100%;border:1px solid #ccc;border-radius:4px;background:#fff;"></canvas>
+            <canvas id="networkCanvas" style="width:100%;max-width:100%;border:1px solid #ccc;border-radius:4px;background:#fff;"></canvas>
           </div>
         </div>
       </div>
@@ -70,22 +70,3 @@
   </div>
 </div>
 
-<script>
-// Place this in your JS file that handles the canvas drawing
-function resizeCanvas() {
-  const canvas = document.getElementById('networkCanvas');
-  const container = document.getElementById('canvasContainer');
-  // Set canvas width/height to container's size (in device pixels)
-  canvas.width = container.clientWidth;
-  canvas.height = 460; // or container.clientHeight if you want dynamic height
-  // Redraw your network here after resizing!
-}
-
-// Initial resize
-resizeCanvas();
-
-// Resize on window resize
-window.addEventListener('resize', resizeCanvas);
-</script>
-
-<script type="module" src="static/nncalc.js"></script>

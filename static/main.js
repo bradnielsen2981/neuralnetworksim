@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'orbitcontrols';
- 
+
+// ================= INITIALIZATION =================
 // Get the container for the Three.js scene
 const container = document.getElementById('three-container');
  
@@ -38,7 +39,7 @@ const gridDivisions = 50;
 const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0x444444);
 scene.add(gridHelper);
 
-// Raycaster + mouse
+// Raycaster + mouse for 3D interaction
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // y = 0
@@ -50,7 +51,7 @@ const hoverSphere = new THREE.Mesh(hoverGeometry, hoverMaterial);
 hoverSphere.visible = false;
 scene.add(hoverSphere);
 
-// Placement state
+// Placement state for sphere placement/adjustment
 let activeSphere = null;        // sphere currently being adjusted (or null)
 let isAdjustingHeight = false;  // true after first click, before final click
 let startMouseY = 0;            // starting mouse Y for height drag
@@ -60,13 +61,28 @@ const heightSensitivity = 0.02; // adjust to taste (pixels -> units)
 // Table body (optional; will be ignored if not present)
 const tableBody = document.getElementById('points-table-body');
 
-// Utility: snap to grid vertex
+// ================ CANVAS RESIZE LOGIC ================
+function resizeCanvas() {
+    const canvas = document.getElementById('networkCanvas');
+    const container = document.getElementById('canvasContainer');
+    if (canvas && container) {
+        canvas.width = container.clientWidth;
+        canvas.height = 460; // or container.clientHeight for dynamic height
+        if (typeof drawNetwork === 'function') {
+            drawNetwork();
+        }
+    }
+}
+
+// ================ UTILITY FUNCTIONS ================
+// Snap to grid vertex
 function snapToGrid(value) {
     const step = gridSize / gridDivisions; // grid spacing
     return Math.round(value / step) * step;
 }
 
-// Mouse move handler
+// ================ EVENT HANDLERS ================
+// Mouse move handler for 3D interaction
 function onMouseMove(event) {
     // normalized device coords for raycaster
     const rect = renderer.domElement.getBoundingClientRect();
@@ -98,7 +114,7 @@ function onMouseMove(event) {
     }
 }
 
-// Mode toggle logic
+// Mode toggle logic and UI elements
 let regressionMode = true;
 const modeToggleBtn = document.getElementById('mode-toggle');
 const pointsLabel = document.querySelector('.points');
@@ -106,7 +122,7 @@ const yLabel = document.getElementById('y-label');
 const pointsTableBody = document.getElementById('points-table-body');
 const pointsTableHead = yLabel.parentElement.parentElement; // <thead>
 
-// Place this below the pointsLabel element
+// Place color selector below the pointsLabel element
 const colorModeSelector = document.createElement('div');
 colorModeSelector.id = 'color-mode-selector';
 colorModeSelector.style.display = 'none';
@@ -130,7 +146,7 @@ const colorMap = {
     Yellow: 0xf1c40f
 };
 
-// Handle color button clicks
+// Handle color button clicks for classification mode
 colorModeSelectorElement.addEventListener('click', (e) => {
     if (e.target.classList.contains('color-btn')) {
         selectedColor = e.target.dataset.color;
@@ -145,10 +161,11 @@ colorModeSelectorElement.addEventListener('click', (e) => {
     }
 });
 
+// ================ POINTS DATA AND TABLE ================
 // Store all points here
 const points = [];
 
-// Helper to render the table based on mode
+// Helper to render the table based on mode (regression/classification)
 function renderPointsTable() {
     pointsTableBody.innerHTML = '';
     if (regressionMode) {
@@ -176,7 +193,7 @@ function renderPointsTable() {
     window.points = points; // <-- Add this line
 }
 
-// Show/hide the button based on mode
+// Show/hide the button based on mode (UI update)
 function updateModeUI() {
     if (regressionMode) {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points ' +
@@ -237,16 +254,7 @@ function generateRandomPoints() {
     renderPointsTable();
 }
 
-// Attach event listener for mode toggle
-modeToggleBtn.addEventListener('click', () => {
-    regressionMode = !regressionMode;
-    updateModeUI();
-});
-
-// Initial UI setup
-updateModeUI();
-
-// Click handler (two-step)
+// Click handler for placing and adjusting spheres (two-step)
 function onClick(event) {
     // If we are currently adjusting height -> finalize placement
     if (isAdjustingHeight && activeSphere) {
@@ -297,23 +305,40 @@ function onClick(event) {
     hoverSphere.visible = false;
 }
 
-// Event listeners
-renderer.domElement.addEventListener('mousemove', onMouseMove);
-renderer.domElement.addEventListener('click', onClick);
-
+// ================ ANIMATION LOOP ================
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
 }
-animate();
 
-// Resize
+document.getElementById('y-label').textContent = regressionMode ? 'Y' : 'Class';
+animate();
+// ================ WINDOW & UI EVENT LISTENERS ================
+// Handle window resize for both Three.js and 2D canvas
 window.addEventListener('resize', () => {
     const newWidth = container.clientWidth;
     const newHeight = container.clientHeight;
     camera.aspect = newWidth / newHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(newWidth, newHeight);
+    resizeCanvas();
 });
+
+// Mode toggle button (single source of truth)
+modeToggleBtn.addEventListener('click', () => {
+    regressionMode = !regressionMode;
+    updateModeUI();
+});
+
+// Initialise UI and event listeners
+updateModeUI();
+renderer.domElement.addEventListener('mousemove', onMouseMove);
+renderer.domElement.addEventListener('click', onClick);
+resizeCanvas();
+animate();
+
+window.scene = scene;
+window.THREE = THREE;
+

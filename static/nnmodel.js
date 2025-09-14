@@ -3,8 +3,8 @@ const ctx = canvas.getContext('2d');
 const neuronRadius = 40;
 
 // Change to `let` so values can be modified
-let inputX = 1;
-let inputY = 1;
+let inputX = 1; // X input
+let inputZ = 1; // Z input
 // Store the positions of input neurons to handle clicks
 let inputNeuronPositions = [];
 
@@ -178,8 +178,8 @@ function drawConnection(x1, y1, x2, y2, weight, bias, inputIndex) {
 function forwardPass(layerSizes, activation) {
     let outputs = [];
     let preActivations = [];
-    outputs.push([inputX, inputY]);
-    preActivations.push([inputX, inputY]);
+    outputs.push([inputX, inputZ]);
+    preActivations.push([inputX, inputZ]);
 
     for (let l = 1; l < layerSizes.length; l++) {
         let layerOutput = [];
@@ -286,7 +286,7 @@ function drawNetwork() {
         for (let n = 0; n < layerSizes[l]; n++) {
             const y = (n + 1) * neuronSpacing;
             if (l === 0) {
-                const labels = ["X", "Y"];
+                const labels = ["X", "Z"];
                 drawInputNeuron(x, y, `${labels[n]}=${outputs[0][n]}`, n);
             } else {
                 drawNeuron(x, y, activation, preActivations[l][n], outputs[l][n]);
@@ -304,15 +304,15 @@ canvas.addEventListener('click', (event) => {
     for (const neuron of inputNeuronPositions) {
         const distance = Math.sqrt(Math.pow(clickX - neuron.x, 2) + Math.pow(clickY - neuron.y, 2));
         if (distance <= neuron.radius) {
-            let currentValue = (neuron.index === 0) ? inputX : inputY;
-            const newValue = prompt(`Enter a new value for ${neuron.index === 0 ? 'X' : 'Y'}:`, currentValue);
+            let currentValue = (neuron.index === 0) ? inputX : inputZ;
+            const newValue = prompt(`Enter a new value for ${neuron.index === 0 ? 'X' : 'Z'}:`, currentValue);
             if (newValue !== null) {
                 const parsedValue = parseFloat(newValue);
                 if (!isNaN(parsedValue)) {
                     if (neuron.index === 0) {
                         inputX = parsedValue;
                     } else {
-                        inputY = parsedValue;
+                        inputZ = parsedValue;
                     }
                     drawNetwork();
                 }
