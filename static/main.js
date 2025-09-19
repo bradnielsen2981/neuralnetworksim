@@ -196,8 +196,11 @@ function renderPointsTable() {
 // Show/hide the button based on mode (UI update)
 function updateModeUI() {
     if (regressionMode) {
-        pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points ' +
-            '<button id="generate-random-btn" class="btn btn-sm btn-secondary ms-2">Generate 20 Random Points</button>';
+        pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points '
+            + '<br><br><button id="generate-random-btn" class="btn btn-sm btn-secondary ms-2">Generate 8 Random Points</button>'
+            + '<button id="generate-box-btn" class="btn btn-sm btn-secondary ms-2">3D Box (8 Points)</button>'
+            + '<button id="generate-ramp-btn" class="btn btn-sm btn-secondary ms-2">3D 45° Ramp (16 Points)</button>'
+            + '<button id="clear-points-btn" class="btn btn-sm btn-danger ms-2">Clear Points</button>';
         pointsTableHead.innerHTML = `
             <tr>
                 <th scope="col">X</th>
@@ -210,7 +213,19 @@ function updateModeUI() {
         // Re-attach event listener after replacing innerHTML
         setTimeout(() => {
             document.getElementById('generate-random-btn').onclick = generateRandomPoints;
+            document.getElementById('generate-box-btn').onclick = generateBoxPoints;
+            document.getElementById('generate-ramp-btn').onclick = generateRampPoints;
+            document.getElementById('clear-points-btn').onclick = clearPoints;
         }, 0);
+// Clear all points and remove spheres from the scene
+function clearPoints() {
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    points.length = 0;
+    window.points = points;
+    renderPointsTable();
+}
     } else {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Classification Points';
         pointsTableHead.innerHTML = `
@@ -227,15 +242,73 @@ function updateModeUI() {
     renderPointsTable();
 }
 
-// Generate 20 random regression points and add to scene/table
+// Generate 8 random regression points and add to scene/table
 function generateRandomPoints() {
     // Remove any spheres previously added (except hoverSphere)
     scene.children
         .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
         .forEach(obj => scene.remove(obj));
     points.length = 0; // Clear points array
+    // Remove any spheres previously added (except hoverSphere)
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    for (let i = 0; i < 8; i++) {
+// Clear all points and remove spheres from the scene
+function clearPoints() {
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    points.length = 0;
+    window.points = points;
+    renderPointsTable();
+}
+// Create a simple 3D box using 8 points (cube corners)
+function generateBoxPoints() {
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    points.length = 0;
+    // Box corners: (-a,-a,-a) to (a,a,a)
+    const a = 8;
+    const corners = [
+        [-a, -a, -a], [a, -a, -a], [-a, a, -a], [a, a, -a],
+        [-a, -a, a], [a, -a, a], [-a, a, a], [a, a, a]
+    ];
+    for (const [x, y, z] of corners) {
+        points.push({ x, y, z });
+        const sphereGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+        const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.set(x, y, z);
+        scene.add(sphere);
+    }
+    window.points = points;
+    renderPointsTable();
+}
 
-    for (let i = 0; i < 20; i++) {
+// Create a 45 degree diagonal 3D ramp using 16 points
+function generateRampPoints() {
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    points.length = 0;
+    // Ramp from (-12,-5,-12) to (12,5,12) in 16 steps
+    for (let i = 0; i < 16; i++) {
+        const t = i / 15;
+        const x = -12 + t * 24;
+        const z = -12 + t * 24;
+        const y = -5 + t * 10;
+        points.push({ x, y, z });
+        const sphereGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+        const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.set(x, y, z);
+        scene.add(sphere);
+    }
+    window.points = points;
+    renderPointsTable();
+}
         const x = Math.random() * 40 - 20; // -20 <= x <= 20
         const z = Math.random() * 40 - 20; // -20 <= z <= 20
         const y = Math.random() * 10 - 5;  // -5 <= y <= 5

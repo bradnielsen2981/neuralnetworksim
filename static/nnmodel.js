@@ -1,6 +1,6 @@
 const canvas = document.getElementById('networkCanvas');
 const ctx = canvas.getContext('2d');
-const neuronRadius = 40;
+let neuronRadius = 40; // Will be dynamically set based on neuron count
 
 // Change to `let` so values can be modified
 let inputX = 1; // X input
@@ -95,7 +95,7 @@ function drawInputNeuron(x, y, label, inputIndex) {
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = '#000';
-    ctx.font = '16px sans-serif';
+    ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.6))}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(label, x, y);
@@ -123,7 +123,7 @@ function drawNeuron(x, y, activation, inputVal, outputVal) {
         const t = i / neuronRadius;
         if (activation === 'relu') {
             fx = t < 0 ? 0 : t * neuronRadius;
-            fx -= 8; // shift down
+            fx -= neuronRadius * 0.2; // scale shift down
         } else if (activation === 'sigmoid') {
             fx = neuronRadius * 0.4 * (1 / (1 + Math.exp(-6 * t)) - 0.5);
         } else if (activation === 'tanh') {
@@ -139,11 +139,11 @@ function drawNeuron(x, y, activation, inputVal, outputVal) {
 
     // Input/Output text inside neuron
     ctx.fillStyle = '#000';
-    ctx.font = '14px sans-serif';
+    ctx.font = `${Math.max(8, Math.floor(neuronRadius * 0.45))}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`I: ${inputVal.toFixed(2)}`, x - neuronRadius / 2 + 10, y - neuronRadius / 2 + 3);
-    ctx.fillText(`O: ${outputVal.toFixed(2)}`, x + neuronRadius / 2 - 15, y + neuronRadius / 2 + 3);
+    ctx.fillText(`I: ${inputVal.toFixed(2)}`, x - neuronRadius * 0.5 + 8, y - neuronRadius * 0.5 + 3);
+    ctx.fillText(`O: ${outputVal.toFixed(2)}`, x + neuronRadius * 0.5 - 12, y + neuronRadius * 0.5 + 3);
 }
 
 // Draw connections
@@ -224,7 +224,7 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
         const plusBtn = document.createElement('button');
         plusBtn.textContent = '+';
         plusBtn.onclick = () => {
-            neuronCounts[layerIndex] = Math.min(4, neuronCounts[layerIndex] + 1);
+            neuronCounts[layerIndex] = Math.min(16, neuronCounts[layerIndex] + 1);
             drawNetwork();
         };
 
@@ -263,6 +263,11 @@ function drawNetwork() {
     const totalSpacing = canvas.width - 100;
     const layerSpacing = totalSpacing / (totalLayers - 1);
     const leftOffset = 50;
+
+    // Find the largest layer for scaling
+    const maxNeurons = Math.max(...layerSizes);
+    // Scale neuron radius so all neurons fit, clamp between 16 and 40
+    neuronRadius = Math.max(16, Math.min(40, Math.floor((canvas.height - 40) / (maxNeurons * 2))));
 
     drawLayerControls(totalLayers, layerSpacing, leftOffset);
 
