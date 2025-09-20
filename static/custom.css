@@ -1,3 +1,14 @@
+/* Custom card header: light grey with black text */
+.card-header.bg-lightgrey {
+  background-color: #f1f1f1 !important;
+  color: #222 !important;
+  font-weight: 600;
+  border-bottom: 1px solid #aaa !important;
+  border-top: 1px solid #aaa !important;
+  border-left: 1px solid #aaa !important;
+  border-right: 1px solid #aaa !important;
+  border-radius: 0 !important;
+}
 /* General body/html styles */
 body, html {
   height: 100%;
