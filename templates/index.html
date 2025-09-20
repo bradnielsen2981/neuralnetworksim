@@ -43,7 +43,16 @@
   <div class="row mb-3 visualiser">
   <div class="col-12 col-md-8 mb-3 mb-md-0">
       <div class="card border-0 rounded-0" style="height:500px;">
-        <div class="card-header bg-lightgrey">3D Visualizer</div>
+        <div class="card-header bg-lightgrey d-flex align-items-center justify-content-between">
+          <span>3D Visualizer</span>
+          <div class="btn-group" role="group">
+            <button id="add-point-btn" class="btn btn-sm btn-success" title="Add Point Mode"><i class="fa-solid fa-plus"></i> Add Point Mode</button>
+            <button id="generate-pyramid-btn" class="btn btn-sm btn-secondary" title="Add Pyramid"><i class="fa-solid fa-cube"></i> Pyramid</button>
+            <button id="generate-ramp-btn" class="btn btn-sm btn-secondary" title="Add Ramp"><i class="fa-solid fa-stairs"></i> Ramp</button>
+            <button id="generate-random-btn" class="btn btn-sm btn-secondary" title="Add Random Points"><i class="fa-solid fa-dice"></i> Random</button>
+            <button id="clear-points-btn" class="btn btn-sm btn-danger" title="Clear Points"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
         <div id="three-container" style="height:100%; width:100%;"></div>
       </div>
     </div>

@@ -1,4 +1,54 @@
 
+
+// ========== GLOBAL Add Point Mode STATE ========== //
+let addPointMode = false;
+
+// ========== HEADER BUTTON EVENT HANDLERS ========== //
+window.addEventListener('DOMContentLoaded', () => {
+    // Add Point Mode toggle (off by default)
+    const addPointBtn = document.getElementById('add-point-btn');
+    function setAddPointMode(on) {
+        addPointMode = on;
+        if (addPointMode) {
+            addPointBtn.classList.add('active');
+            addPointBtn.classList.remove('btn-success');
+            addPointBtn.classList.add('btn-warning');
+            addPointBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Point Mode (ON)';
+        } else {
+            addPointBtn.classList.remove('active');
+            addPointBtn.classList.remove('btn-warning');
+            addPointBtn.classList.add('btn-success');
+            addPointBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Point Mode';
+        }
+    }
+    // Set initial state (off)
+    setAddPointMode(false);
+    addPointBtn.addEventListener('click', () => setAddPointMode(!addPointMode));
+    // Right-click disables add point mode
+    document.getElementById('three-container').addEventListener('contextmenu', (e) => {
+        if (addPointMode) {
+            setAddPointMode(false);
+            e.preventDefault();
+        }
+    });
+    // Pyramid, Ramp, Random, Clear
+    document.getElementById('generate-pyramid-btn').onclick = generatePyramidPoints;
+    document.getElementById('generate-ramp-btn').onclick = generateRampPoints;
+    document.getElementById('generate-random-btn').onclick = generateRandomPoints;
+    document.getElementById('clear-points-btn').onclick = clearPoints;
+
+    // Only allow placing points if addPointMode is ON
+    const origOnClick = onClick;
+    function wrappedOnClick(event) {
+        if (!addPointMode) return;
+        origOnClick(event);
+    }
+    // Remove previous click event and add wrapped
+    const threeContainer = document.getElementById('three-container');
+    threeContainer.removeEventListener('click', onClick);
+    threeContainer.addEventListener('click', wrappedOnClick);
+});
+
 import * as THREE from 'three';
 import { OrbitControls } from 'orbitcontrols';
 
@@ -85,11 +135,7 @@ function clearPoints() {
     // Also clear the three-container DOM
     const container = document.getElementById('three-container');
     if (container) {
-        while (container.firstChild) {
-            container.removeChild(container.firstChild);
-        }
-        // Re-add the renderer's DOM element
-        container.appendChild(renderer.domElement);
+            pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points ';
     }
 
     // Clear the points array
@@ -112,6 +158,11 @@ function snapToGrid(value) {
 // ================ EVENT HANDLERS ================
 // Mouse move handler for 3D interaction
 function onMouseMove(event) {
+    // Only show hoverSphere if Add Point Mode is ON
+    if (!addPointMode) {
+        hoverSphere.visible = false;
+        return;
+    }
     // normalized device coords for raycaster
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -121,7 +172,8 @@ function onMouseMove(event) {
     if (isAdjustingHeight && activeSphere) {
         const deltaPixels = startMouseY - event.clientY; // positive when mouse moved up
         const deltaUnits = deltaPixels * heightSensitivity;
-        const newY = Math.max(0.1, baseY + deltaUnits); // clamp to >= 0.1
+        // Allow y to be negative, clamp to [-20, 20]
+        const newY = Math.max(-20, Math.min(20, baseY + deltaUnits));
         activeSphere.position.y = newY;
         return;
     }
@@ -225,10 +277,6 @@ function renderPointsTable() {
 function updateModeUI() {
     if (regressionMode) {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points '
-            + '<br><br><button id="generate-random-btn" class="btn btn-sm btn-secondary ms-2">Generate 16 Random Points</button>'
-            + '<button id="generate-pyramid-btn" class="btn btn-sm btn-secondary ms-2">3D Pyramid</button>'
-            + '<button id="generate-ramp-btn" class="btn btn-sm btn-secondary ms-2">3D Ramp</button>'
-            + '<button id="clear-points-btn" class="btn btn-sm btn-danger ms-2">Clear</button>';
         pointsTableHead.innerHTML = `
             <tr>
                 <th scope="col">X</th>
@@ -269,11 +317,13 @@ function onClick(event) {
     if (isAdjustingHeight && activeSphere) {
         const { x, y, z } = activeSphere.position;
         let classLabel = '';
+        // Clamp z to [-20, 20] before saving
+        const clampedZ = Math.max(-20, Math.min(20, z));
         if (regressionMode) {
-            points.push({ x, y, z });
+            points.push({ x, y, z: clampedZ });
         } else {
             classLabel = selectedColor;
-            points.push({ x, y, z, class: classLabel });
+            points.push({ x, y, z: clampedZ, class: classLabel });
         }
         renderPointsTable();
 
@@ -288,6 +338,17 @@ function onClick(event) {
     // Not adjusting currently -> start placement if hovering a vertex
     if (!hoverSphere.visible) return;
 
+    // Clamp z to [-20, 20] for placement, y starts at 0
+    const clampedZ = Math.max(-20, Math.min(20, hoverSphere.position.z));
+    const x = hoverSphere.position.x;
+    const z = clampedZ;
+    // Prevent duplicate xz positions
+    const duplicate = points.some(pt => Math.abs(pt.x - x) < 1e-6 && Math.abs(pt.z - z) < 1e-6);
+    if (duplicate) {
+        alert("Please place a point on another position. In Regression, two points sharing the same XZ value will confuse the learning algorithm.");
+        return;
+    }
+
     // create the placed sphere and enter height-adjust mode
     const sphereGeometry = new THREE.SphereGeometry(0.35, 16, 16);
     let sphereMaterial;
@@ -297,16 +358,14 @@ function onClick(event) {
         sphereMaterial = new THREE.MeshStandardMaterial({ color: colorMap[selectedColor] });
     }
     const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    // initial Y set slightly above ground so it's visible
-    // Center the sphere at the grid point (Y = 0.0)
-    sphere.position.set(hoverSphere.position.x, 0, hoverSphere.position.z);
+    sphere.position.set(x, 0, z);
     scene.add(sphere);
 
     // set state for vertical adjustment
     activeSphere = sphere;
     isAdjustingHeight = true;
     startMouseY = event.clientY;
-    baseY = sphere.position.y;
+    baseY = 0; // always start at y=0 for adjustment
 
     // disable orbit controls so camera doesn't move while adjusting
     controls.enabled = false;
