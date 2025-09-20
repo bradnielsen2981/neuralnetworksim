@@ -1,3 +1,4 @@
+
 import * as THREE from 'three';
 import { OrbitControls } from 'orbitcontrols';
 
@@ -74,6 +75,33 @@ function resizeCanvas() {
     }
 }
 
+function clearPoints() {
+    alert("HERE");
+    // Remove all objects from the scene except hoverSphere
+    scene.children
+        .filter(obj => obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+
+    // Also clear the three-container DOM
+    const container = document.getElementById('three-container');
+    if (container) {
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+        // Re-add the renderer's DOM element
+        container.appendChild(renderer.domElement);
+    }
+
+    // Clear the points array
+    points.length = 0;
+    window.points = points;
+
+    // Re-render the table (empties it)
+    renderPointsTable();
+
+    console.log("All points and 3D container cleared");
+}
+
 // ================ UTILITY FUNCTIONS ================
 // Snap to grid vertex
 function snapToGrid(value) {
@@ -113,6 +141,114 @@ function onMouseMove(event) {
         hoverSphere.visible = false;
     }
 }
+
+// Create a 3D pyramid with exactly 64 evenly distributed points (no base)
+function generatePyramidPoints() {
+    // Clear old points and spheres first
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    points.length = 0;
+
+    const a = 10;  // half-width of base
+    const h = 15;  // pyramid height
+    const apex = { x: 0, y: h, z: 0 };
+
+    // Base corners
+    const base = [
+        { x: -a, y: 0, z: -a },
+        { x:  a, y: 0, z: -a },
+        { x:  a, y: 0, z:  a },
+        { x: -a, y: 0, z:  a }
+    ];
+
+    // Helper to generate exactly 'count' points on a triangular face
+    function generateFacePoints(p1, p2, p3, count) {
+        const rows = Math.ceil(Math.sqrt(count));
+        let generated = 0;
+
+        for (let i = 0; i < rows && generated < count; i++) {
+            for (let j = 0; j <= i && generated < count; j++) {
+                const u = i / rows;
+                const v = j / rows;
+
+                const x = p1.x + u * (p2.x - p1.x) + v * (p3.x - p1.x);
+                const y = p1.y + u * (p2.y - p1.y) + v * (p3.y - p1.y);
+                const z = p1.z + u * (p2.z - p1.z) + v * (p3.z - p1.z);
+
+                points.push({ x, y, z });
+                const sphereGeometry = new THREE.SphereGeometry(0.25, 12, 12);
+                const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+                const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                sphere.position.set(x, y, z);
+                scene.add(sphere);
+
+                generated++;
+            }
+        }
+    }
+
+    const pointsPerFace = 16; // 64 points total → 16 per face
+    generateFacePoints(apex, base[0], base[1], pointsPerFace);
+    generateFacePoints(apex, base[1], base[2], pointsPerFace);
+    generateFacePoints(apex, base[2], base[3], pointsPerFace);
+    generateFacePoints(apex, base[3], base[0], pointsPerFace);
+
+    window.points = points;
+    renderPointsTable();
+}
+
+
+
+
+
+// Create a 45 degree diagonal 3D ramp using 16 points
+// Create a 45-degree diagonal 3D ramp with width using 16 steps and 4 points across width
+function generateRampPoints() {
+    scene.children
+        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
+        .forEach(obj => scene.remove(obj));
+    points.length = 0;
+
+    const steps = 16;
+    const widthPoints = 4;      // number of points across the ramp width
+    const rampWidth = 8;        // total width of ramp
+    const halfWidth = rampWidth / 2;
+
+    const start = { x: -12, y: -5, z: -12 };
+    const end   = { x:  12, y:  5, z:  12 };
+
+    for (let i = 0; i < steps; i++) {
+        const t = i / (steps - 1);
+        const xCenter = start.x + t * (end.x - start.x);
+        const y = start.y + t * (end.y - start.y);
+        const zCenter = start.z + t * (end.z - start.z);
+
+        // Perpendicular direction vector (for width) in XZ plane
+        const dx = -(end.z - start.z);
+        const dz = end.x - start.x;
+        const length = Math.sqrt(dx*dx + dz*dz);
+        const ux = dx / length;
+        const uz = dz / length;
+
+        for (let j = 0; j < widthPoints; j++) {
+            const offset = -halfWidth + (j / (widthPoints - 1)) * rampWidth;
+            const x = xCenter + ux * offset;
+            const z = zCenter + uz * offset;
+
+            points.push({ x, y, z });
+            const sphereGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+            const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            sphere.position.set(x, y, z);
+            scene.add(sphere);
+        }
+    }
+
+    window.points = points;
+    renderPointsTable();
+}
+
 
 // Mode toggle logic and UI elements
 let regressionMode = true;
@@ -197,10 +333,10 @@ function renderPointsTable() {
 function updateModeUI() {
     if (regressionMode) {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points '
-            + '<br><br><button id="generate-random-btn" class="btn btn-sm btn-secondary ms-2">Generate 8 Random Points</button>'
-            + '<button id="generate-box-btn" class="btn btn-sm btn-secondary ms-2">3D Box (8 Points)</button>'
-            + '<button id="generate-ramp-btn" class="btn btn-sm btn-secondary ms-2">3D 45° Ramp (16 Points)</button>'
-            + '<button id="clear-points-btn" class="btn btn-sm btn-danger ms-2">Clear Points</button>';
+            + '<br><br><button id="generate-random-btn" class="btn btn-sm btn-secondary ms-2">Generate 16 Random Points</button>'
+            + '<button id="generate-pyramid-btn" class="btn btn-sm btn-secondary ms-2">3D Pyramid</button>'
+            + '<button id="generate-ramp-btn" class="btn btn-sm btn-secondary ms-2">3D Ramp</button>'
+            + '<button id="clear-points-btn" class="btn btn-sm btn-danger ms-2">Clear</button>';
         pointsTableHead.innerHTML = `
             <tr>
                 <th scope="col">X</th>
@@ -213,19 +349,11 @@ function updateModeUI() {
         // Re-attach event listener after replacing innerHTML
         setTimeout(() => {
             document.getElementById('generate-random-btn').onclick = generateRandomPoints;
-            document.getElementById('generate-box-btn').onclick = generateBoxPoints;
+            document.getElementById('generate-pyramid-btn').onclick = generatePyramidPoints;
             document.getElementById('generate-ramp-btn').onclick = generateRampPoints;
             document.getElementById('clear-points-btn').onclick = clearPoints;
         }, 0);
 // Clear all points and remove spheres from the scene
-function clearPoints() {
-    scene.children
-        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
-        .forEach(obj => scene.remove(obj));
-    points.length = 0;
-    window.points = points;
-    renderPointsTable();
-}
     } else {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Classification Points';
         pointsTableHead.innerHTML = `
@@ -253,39 +381,30 @@ function generateRandomPoints() {
     scene.children
         .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
         .forEach(obj => scene.remove(obj));
-    for (let i = 0; i < 8; i++) {
-// Clear all points and remove spheres from the scene
-function clearPoints() {
-    scene.children
-        .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
-        .forEach(obj => scene.remove(obj));
-    points.length = 0;
-    window.points = points;
-    renderPointsTable();
-}
+    for (let i = 0; i < 8; i++) { }
 // Create a simple 3D box using 8 points (cube corners)
-function generateBoxPoints() {
-    scene.children
+//function generateBoxPoints() {
+    /*scene.children
         .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
-        .forEach(obj => scene.remove(obj));
-    points.length = 0;
+        .forEach(obj => scene.remove(obj)); */
+    /*points.length = 0;*/
     // Box corners: (-a,-a,-a) to (a,a,a)
-    const a = 8;
-    const corners = [
+    //const a = 8;
+    /*const corners = [
         [-a, -a, -a], [a, -a, -a], [-a, a, -a], [a, a, -a],
         [-a, -a, a], [a, -a, a], [-a, a, a], [a, a, a]
-    ];
-    for (const [x, y, z] of corners) {
+    ];*/
+    /*for (const [x, y, z] of corners) {
         points.push({ x, y, z });
         const sphereGeometry = new THREE.SphereGeometry(0.35, 16, 16);
         const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
         const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
         sphere.position.set(x, y, z);
         scene.add(sphere);
-    }
-    window.points = points;
-    renderPointsTable();
-}
+    }*/
+    //window.points = points;
+    //renderPointsTable();
+//}
 
 // Create a 45 degree diagonal 3D ramp using 16 points
 function generateRampPoints() {
@@ -293,19 +412,44 @@ function generateRampPoints() {
         .filter(obj => obj.isMesh && obj.geometry.type === "SphereGeometry" && obj !== hoverSphere)
         .forEach(obj => scene.remove(obj));
     points.length = 0;
-    // Ramp from (-12,-5,-12) to (12,5,12) in 16 steps
-    for (let i = 0; i < 16; i++) {
-        const t = i / 15;
-        const x = -12 + t * 24;
-        const z = -12 + t * 24;
-        const y = -5 + t * 10;
+    // Pyramid with 128 points, y >= 0, twice as many points around the base
+    // Shift pyramid up so all y >= 0
+    const baseY = 0;
+    const apexY = 12;
+    const baseRadius = 12;
+    const basePoints = 64;
+    // Base circle (y = 0)
+    for (let i = 0; i < basePoints; i++) {
+        const angle = (2 * Math.PI * i) / basePoints;
+        const x = baseRadius * Math.cos(angle);
+        const z = baseRadius * Math.sin(angle);
+        const y = baseY;
         points.push({ x, y, z });
-        const sphereGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+        const sphereGeometry = new THREE.SphereGeometry(0.2, 12, 12);
         const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
         const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
         sphere.position.set(x, y, z);
         scene.add(sphere);
     }
+    // Sides (lines from base to apex)
+    for (let i = 0; i < basePoints; i++) {
+        const angle = (2 * Math.PI * i) / basePoints;
+        // Only apex for now (no midpoints)
+        const x = 0;
+        const z = 0;
+        const y = apexY;
+        points.push({ x, y, z });
+        const sphereGeometry = new THREE.SphereGeometry(0.2, 12, 12);
+        const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.set(x, y, z);
+        scene.add(sphere);
+    }
+    // Add the apex (redundant, but for clarity)
+    // points.push({ x: 0, y: apexY, z: 0 });
+    // const apexSphere = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 12), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+    // apexSphere.position.set(0, apexY, 0);
+    // scene.add(apexSphere);
     window.points = points;
     renderPointsTable();
 }
