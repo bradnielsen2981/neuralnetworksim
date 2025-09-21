@@ -3,6 +3,7 @@
 // ========== GLOBAL Add Point Mode STATE ========== //
 let addPointMode = false;
 
+
 // ========== HEADER BUTTON EVENT HANDLERS ========== //
 window.addEventListener('DOMContentLoaded', () => {
     // Add Point Mode toggle (off by default)
@@ -14,11 +15,17 @@ window.addEventListener('DOMContentLoaded', () => {
             addPointBtn.classList.remove('btn-success');
             addPointBtn.classList.add('btn-warning');
             addPointBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Point Mode (ON)';
+            // Set dark orange background
+            addPointBtn.style.backgroundColor = '#d35400';
+            addPointBtn.style.color = '#fff';
         } else {
             addPointBtn.classList.remove('active');
             addPointBtn.classList.remove('btn-warning');
             addPointBtn.classList.add('btn-success');
             addPointBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Point Mode';
+            // Reset to default (Bootstrap success green)
+            addPointBtn.style.backgroundColor = '';
+            addPointBtn.style.color = '';
         }
     }
     // Set initial state (off)
@@ -31,14 +38,27 @@ window.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
         }
     });
-    // Pyramid, Ramp, Random, Clear
-    document.getElementById('generate-pyramid-btn').onclick = generatePyramidPoints;
-    document.getElementById('generate-ramp-btn').onclick = generateRampPoints;
-    document.getElementById('generate-random-btn').onclick = generateRandomPoints;
-    document.getElementById('clear-points-btn').onclick = clearPoints;
+        // Pyramid, Ramp, Random, Clear
+        const pyramidBtn = document.getElementById('generate-pyramid-btn');
+        const rampBtn = document.getElementById('generate-ramp-btn');
+        const randomBtn = document.getElementById('generate-random-btn');
+        const clearBtn = document.getElementById('clear-points-btn');
+
+        pyramidBtn.onclick = generatePyramidPoints;
+        rampBtn.onclick = generateRampPoints;
+        randomBtn.onclick = generateRandomPoints;
+        clearBtn.onclick = clearPoints;
+
+        // Set button colors
+        pyramidBtn.style.backgroundColor = '#2980b9'; // blue
+        pyramidBtn.style.color = '#fff';
+        rampBtn.style.backgroundColor = '#ff00ff'; // magenta
+        rampBtn.style.color = '#fff';
+        randomBtn.style.backgroundColor = '#f1c40f'; // yellow
+        randomBtn.style.color = '#222';
 
     // Only allow placing points if addPointMode is ON
-    const origOnClick = onClick;
+    /*const origOnClick = onClick;
     function wrappedOnClick(event) {
         if (!addPointMode) return;
         origOnClick(event);
@@ -46,7 +66,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Remove previous click event and add wrapped
     const threeContainer = document.getElementById('three-container');
     threeContainer.removeEventListener('click', onClick);
-    threeContainer.addEventListener('click', wrappedOnClick);
+    threeContainer.addEventListener('click', wrappedOnClick);*/
 });
 
 import * as THREE from 'three';
@@ -126,26 +146,16 @@ function resizeCanvas() {
 }
 
 function clearPoints() {
-    alert("HERE");
     // Remove all objects from the scene except hoverSphere
     scene.children
-        .filter(obj => obj !== hoverSphere)
+        .filter(obj => obj !== hoverSphere && obj.type === 'Mesh')
         .forEach(obj => scene.remove(obj));
 
-    // Also clear the three-container DOM
-    const container = document.getElementById('three-container');
-    if (container) {
-            pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points ';
-    }
-
-    // Clear the points array
+    // Only clear the points array and table, not the container
     points.length = 0;
     window.points = points;
-
-    // Re-render the table (empties it)
     renderPointsTable();
-
-    console.log("All points and 3D container cleared");
+    console.log("All points cleared");
 }
 
 // ================ UTILITY FUNCTIONS ================
@@ -275,6 +285,7 @@ function renderPointsTable() {
 
 // Show/hide the button based on mode (UI update)
 function updateModeUI() {
+    alert("Updating Mode UI");
     if (regressionMode) {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points '
         pointsTableHead.innerHTML = `
@@ -290,7 +301,7 @@ function updateModeUI() {
         setTimeout(() => {
             document.getElementById('generate-random-btn').onclick = generateRandomPoints;
             document.getElementById('generate-pyramid-btn').onclick = generatePyramidPoints;
-            document.getElementById('generate-ramp-btn').onclick = generateRampPoints;
+            document.getElementById('generate-ramp-btn').onclick = generateRampPoints; 
             document.getElementById('clear-points-btn').onclick = clearPoints;
         }, 0);
 // Clear all points and remove spheres from the scene
@@ -309,6 +320,143 @@ function updateModeUI() {
     }
     renderPointsTable();
 }
+
+
+// ================ GLOBAL POINT GENERATION FUNCTIONS ================
+function generateRandomPoints() {
+    alert("Generating Random Points");
+    // Clear existing points and spheres (except hoverSphere)
+    scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
+    points.length = 0;
+    const usedXZ = new Set();
+    let count = 0;
+    while (count < 16) {
+        // X and Z in grid range, snapped to grid
+        const step = gridSize / gridDivisions;
+        const x = snapToGrid((Math.random() - 0.5) * gridSize);
+        const z = snapToGrid((Math.random() - 0.5) * gridSize);
+        const key = `${x.toFixed(4)},${z.toFixed(4)}`;
+        if (usedXZ.has(key)) continue;
+        usedXZ.add(key);
+        // y in [-10, 10]
+        const y = Math.random() * 20 - 10;
+        points.push({ x, y, z, class: 'Yellow' });
+        // Add sphere
+        const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(0.35, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0xf1c40f }) // yellow
+        );
+        sphere.position.set(x, y, z);
+        scene.add(sphere);
+        count++;
+    }
+    renderPointsTable();
+}
+
+
+function generatePyramidPoints() {
+    //alert("Generating Pyramid Points");
+    // Clear existing points and spheres (except hoverSphere)
+    scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
+    points.length = 0;
+    // Pyramid parameters
+    const baseSize = 16; // width of base
+    const height = 12;
+    const baseY = 0;
+    const cx = 0, cz = 0; // center
+    // 4 corners of base
+    const corners = [
+        { x: cx - baseSize/2, z: cz - baseSize/2 },
+        { x: cx + baseSize/2, z: cz - baseSize/2 },
+        { x: cx + baseSize/2, z: cz + baseSize/2 },
+        { x: cx - baseSize/2, z: cz + baseSize/2 }
+    ];
+    // Midpoints of each side
+    const mids = [
+        { x: cx, z: cz - baseSize/2 },
+        { x: cx + baseSize/2, z: cz },
+        { x: cx, z: cz + baseSize/2 },
+        { x: cx - baseSize/2, z: cz }
+    ];
+    // Apex
+    const apex = { x: cx, y: baseY + height, z: cz };
+    // Place points along edges (no base)
+    const edgePoints = [];
+    // For each edge from base to apex (corners and mids)
+    function edge(a, b, n) {
+        for (let i = 0; i <= n; i++) {
+            const t = i / n;
+            edgePoints.push({
+                x: a.x + (b.x - a.x) * t,
+                y: baseY + (b.y !== undefined ? (b.y - baseY) * t : 0),
+                z: a.z + (b.z - a.z) * t
+            });
+        }
+    }
+    // Edges: corners to apex
+    for (const c of corners) edge(c, apex, 5);
+    // Edges: mids to apex
+    for (const m of mids) edge(m, apex, 3);
+    // Edges: between corners (base perimeter, but not base itself)
+    for (let i = 0; i < 4; i++) edge(corners[i], corners[(i+1)%4], 3);
+    // Edges: between mids (base perimeter, but not base itself)
+    for (let i = 0; i < 4; i++) edge(mids[i], mids[(i+1)%4], 1);
+    // Remove duplicates (by x,z,y)
+    const uniq = {};
+    for (const pt of edgePoints) {
+        const key = `${pt.x.toFixed(4)},${pt.y.toFixed(4)},${pt.z.toFixed(4)}`;
+        if (!uniq[key]) {
+            uniq[key] = pt;
+        }
+    }
+    const allPts = Object.values(uniq);
+    // If more than 64, trim; if less, add apex again
+    while (allPts.length < 64) allPts.push({ ...apex });
+    while (allPts.length > 64) allPts.pop();
+    for (const pt of allPts) {
+        points.push({ x: pt.x, y: pt.y !== undefined ? pt.y : baseY, z: pt.z, class: 'Blue' });
+        const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(0.35, 16, 16),
+            new THREE.MeshStandardMaterial({ color: 0x2980b9 }) // blue
+        );
+        sphere.position.set(pt.x, pt.y !== undefined ? pt.y : baseY, pt.z);
+        scene.add(sphere);
+    }
+    renderPointsTable();
+    
+}
+
+function generateRampPoints() {
+    alert("Generating Ramp Points");
+    // Clear existing points and spheres (except hoverSphere)
+    scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
+    points.length = 0;
+    // Ramp parameters
+    const width = 20;
+    const lines = 4;
+    const pointsPerLine = 8;
+    const spacing = width / (pointsPerLine - 1);
+    const yStart = 0;
+    const yStep = 1; // 45 deg: y increases by same as x
+    const zStart = -width/2;
+    for (let l = 0; l < lines; l++) {
+        const x0 = -width/2 + l * (width/(lines-1));
+        for (let i = 0; i < pointsPerLine; i++) {
+            const x = x0;
+            const z = zStart + i * spacing;
+            const y = yStart + i * yStep;
+            points.push({ x, y, z, class: 'Magenta' });
+            const sphere = new THREE.Mesh(
+                new THREE.SphereGeometry(0.35, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0xff00ff }) // magenta
+            );
+            sphere.position.set(x, y, z);
+            scene.add(sphere);
+        }
+    }
+    renderPointsTable();
+}
+
 
 
 // Click handler for placing and adjusting spheres (two-step)
