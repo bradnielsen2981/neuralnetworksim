@@ -155,7 +155,7 @@ function clearPoints() {
     points.length = 0;
     window.points = points;
     renderPointsTable();
-    console.log("All points cleared");
+    // Removed console.log
 }
 
 // ================ UTILITY FUNCTIONS ================
@@ -285,7 +285,7 @@ function renderPointsTable() {
 
 // Show/hide the button based on mode (UI update)
 function updateModeUI() {
-    alert("Updating Mode UI");
+    // Removed alert
     if (regressionMode) {
         pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points '
         pointsTableHead.innerHTML = `
@@ -324,7 +324,7 @@ function updateModeUI() {
 
 // ================ GLOBAL POINT GENERATION FUNCTIONS ================
 function generateRandomPoints() {
-    alert("Generating Random Points");
+    // Removed alert
     // Clear existing points and spheres (except hoverSphere)
     scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
     points.length = 0;
@@ -355,7 +355,7 @@ function generateRandomPoints() {
 
 
 function generatePyramidPoints() {
-    //alert("Generating Pyramid Points");
+    // Removed alert
     // Clear existing points and spheres (except hoverSphere)
     scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
     points.length = 0;
@@ -427,7 +427,7 @@ function generatePyramidPoints() {
 }
 
 function generateRampPoints() {
-    alert("Generating Ramp Points");
+    // Removed alert
     // Clear existing points and spheres (except hoverSphere)
     scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
     points.length = 0;
@@ -493,7 +493,7 @@ function onClick(event) {
     // Prevent duplicate xz positions
     const duplicate = points.some(pt => Math.abs(pt.x - x) < 1e-6 && Math.abs(pt.z - z) < 1e-6);
     if (duplicate) {
-        alert("Please place a point on another position. In Regression, two points sharing the same XZ value will confuse the learning algorithm.");
+    // Removed alert
         return;
     }
 

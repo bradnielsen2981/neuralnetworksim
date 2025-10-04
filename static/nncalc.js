@@ -3,14 +3,12 @@
 // Helper to get network structure from nnmodel.js controls
 function getNetworkStructure() {
     // Get number of hidden layers and neurons per layer from the UI controls
-    const numHiddenLayers = Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
-    const neuronCounts = [];
-    for (let i = 0; i < numHiddenLayers; i++) {
-        // Try to get neuron count from nnmodel.js state, fallback to 2 if not found
-        const layerControl = document.querySelectorAll('.layer-control span')[i];
-        neuronCounts.push(layerControl ? parseInt(layerControl.textContent) : 2);
+    // Read neuron counts directly from window.neuronCounts, fallback to [2] if not available
+    if (Array.isArray(window.neuronCounts) && window.neuronCounts.length > 0) {
+        return window.neuronCounts.slice();
+    } else {
+        return [2];
     }
-    return neuronCounts;
 }
 
 // Helper to get activation function
@@ -36,7 +34,7 @@ function getLearningParams() {
 
 // Build and train the model
 async function trainModelFromUI() {
-    alert("Starting training...");
+    // Removed alert
     // Get network structure from nnmodel.js controls
     const neuronCounts = getNetworkStructure();
     const activation = getActivation();
@@ -45,17 +43,17 @@ async function trainModelFromUI() {
     // Prepare data from main.js points
     const points = getPointsData();
     if (!points.length) {
-        alert("No points to train on!");
+    // Removed alert
         return;
     }
-    console.log(points);
+    // Removed console.log
 
     // X: [ [x, z], ... ]   Y: [ [y], ... ]
     const xs = points.map(pt => [pt.x, pt.z]);
     const ys = points.map(pt => [pt.y]);
         // Print each training point in the requested format
         xs.forEach((input, i) => {
-            console.log(`X: ${input[0]}, Z: ${input[1]}, Y: ${ys[i][0]}`);
+            // Removed console.log
         });
 
     // Build model with the same structure as nnmodel.js
@@ -89,7 +87,7 @@ async function trainModelFromUI() {
 
     // Train
     await model.fit(tf.tensor2d(xs), tf.tensor2d(ys), { epochs });
-    alert("Training complete!");
+    // Removed alert
 
     // === Generate prediction mesh and add to Three.js scene ===
     // Remove previous prediction mesh if it exists
@@ -103,7 +101,7 @@ async function trainModelFromUI() {
     // Access the Three.js scene from main.js
     if (window.scene && window.THREE) {
 
-        alert("Creating prediction mesh...");
+    // Removed alert
         const step = 1; // grid step size
         const xMin = -20, xMax = 20, zMin = -20, zMax = 20;
         const xCount = Math.floor((xMax - xMin) / step) + 1;
@@ -118,13 +116,13 @@ async function trainModelFromUI() {
                 const z = zMin + zi * step;
                 const y = (await model.predict(window.tf.tensor2d([[x, z]])).array())[0][0];
                     // Print prediction in requested format
-                    console.log(`X: ${x}, Z: ${z}, Y: ${y}`);
+                    // Removed console.log
                 vertices.push(x, y, z);
                 // Dark green color
                 colors.push(0.1, 0.4, 0.1);
             }
         }
-            // console.log(`Generated ${vertices.length / 3} vertices for prediction mesh.`);
+            // Removed console.log
         geometry.setAttribute('position', new window.THREE.Float32BufferAttribute(vertices, 3));
         geometry.setAttribute('color', new window.THREE.Float32BufferAttribute(colors, 3));
 

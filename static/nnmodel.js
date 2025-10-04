@@ -1,20 +1,21 @@
+//-------- Canvas and Drawing Context --------//
 const canvas = document.getElementById('networkCanvas');
 const ctx = canvas.getContext('2d');
 let neuronRadius = 40; // Will be dynamically set based on neuron count
 
-// Change to `let` so values can be modified
+//-------- Input Variables --------//
 let inputX = 1; // X input
 let inputZ = 1; // Z input
-// Store the positions of input neurons to handle clicks
 let inputNeuronPositions = [];
 
+//-------- Network State Variables --------//
 let weights = [];
 let biases = [];
 let layerSizes = [];
 let neuronCounts = [2];
 let lastNetworkStructure = "";
 
-// Helper for Standard Normal distribution (Box-Muller transform)
+//-------- Random Number Helper --------//
 let spareRandom = null;
 function getNormalRandom() {
     if (spareRandom !== null) {
@@ -35,7 +36,7 @@ function getNormalRandom() {
     return u * s;
 }
 
-// Initialize weights and biases based on a dynamic array of hidden layer sizes and init type
+//-------- Network Initialization --------//
 function initializeNetwork(hiddenNeuronCounts, initType) {
     layerSizes = [2, ...hiddenNeuronCounts, 1];
 
@@ -77,7 +78,7 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
 }
 
 
-// Activation functions
+//-------- Activation Functions --------//
 function activate(x, activation) {
     if (activation === 'relu') return Math.max(0, x);
     if (activation === 'sigmoid') return 1 / (1 + Math.exp(-x));
@@ -85,7 +86,7 @@ function activate(x, activation) {
     return x;
 }
 
-// Draw input neuron
+//-------- Drawing Functions --------//
 function drawInputNeuron(x, y, label, inputIndex) {
     ctx.beginPath();
     ctx.arc(x, y, neuronRadius, 0, Math.PI * 2);
@@ -174,7 +175,7 @@ function drawConnection(x1, y1, x2, y2, weight, bias, inputIndex) {
     ctx.restore();
 }
 
-// Forward pass with pre-activation storage
+//-------- Forward Pass --------//
 function forwardPass(layerSizes, activation) {
     let outputs = [];
     let preActivations = [];
@@ -198,7 +199,7 @@ function forwardPass(layerSizes, activation) {
     return { outputs, preActivations };
 }
 
-// Draw the +/- controls above each hidden layer
+//-------- Layer Controls --------//
 function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
     const container = document.getElementById('canvasContainer');
     container.querySelectorAll('.layer-control').forEach(el => el.remove());
@@ -215,6 +216,7 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
         minusBtn.textContent = '-';
         minusBtn.onclick = () => {
             neuronCounts[layerIndex] = Math.max(1, neuronCounts[layerIndex] - 1);
+            window.neuronCounts = neuronCounts;
             drawNetwork();
         };
 
@@ -225,6 +227,7 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
         plusBtn.textContent = '+';
         plusBtn.onclick = () => {
             neuronCounts[layerIndex] = Math.min(16, neuronCounts[layerIndex] + 1);
+            window.neuronCounts = neuronCounts;
             drawNetwork();
         };
 
@@ -236,19 +239,22 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
 }
 
 
-// Draw full network
+//-------- Draw Full Network --------//
 function drawNetwork() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     inputNeuronPositions = []; // Reset input neuron positions on each redraw
 
-    const numHiddenLayers = Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
-    const activation = document.getElementById('activation').value;
-    const initType = document.getElementById('initialization').value;
+    // Use global window variables for network configuration
+    const numHiddenLayers = window.layernumber !== undefined ? window.layernumber : Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
+    const activation = window.activationtype !== undefined ? window.activationtype : document.getElementById('activation').value;
+    const initType = window.initmethod !== undefined ? window.initmethod : document.getElementById('initialization').value;
 
     while (neuronCounts.length < numHiddenLayers) {
         neuronCounts.push(2);
+        window.neuronCounts = neuronCounts;
     }
     neuronCounts.length = numHiddenLayers;
+    window.neuronCounts = neuronCounts;
 
     // A change in structure or init type will trigger re-initialization
     const currentNetworkStructure = `${initType}-${JSON.stringify(neuronCounts)}`;
@@ -300,7 +306,7 @@ function drawNetwork() {
     }
 }
 
-// Event listener for canvas clicks
+//-------- Canvas Click Event Listener --------//
 canvas.addEventListener('click', (event) => {
     const rect = canvas.getBoundingClientRect();
     const clickX = event.clientX - rect.left;
@@ -327,16 +333,70 @@ canvas.addEventListener('click', (event) => {
     }
 });
 
-// Event Listeners
-document.getElementById('layers').addEventListener('input', drawNetwork);
-document.getElementById('activation').addEventListener('change', drawNetwork);
-document.getElementById('initialization').addEventListener('change', drawNetwork);
+//-------- UI Event Listeners --------//
+document.getElementById('layers').addEventListener('input', function() {
+    window.layernumber = Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
+    // Set window.neuronCounts to an array of 2s by default for the new layer number
+    window.neuronCounts = Array(window.layernumber).fill(2);
+    drawNetwork();
+});
+document.getElementById('activation').addEventListener('change', function() {
+    window.activationtype = document.getElementById('activation').value;
+    drawNetwork();
+});
+document.getElementById('initialization').addEventListener('change', function() {
+    window.initmethod = document.getElementById('initialization').value;
+    drawNetwork();
+});
 
+// NN parameter event listeners
+document.getElementById('learning-rate').addEventListener('input', function() {
+    window.learningRate = parseFloat(document.getElementById('learning-rate').value);
+});
+document.getElementById('momentum').addEventListener('input', function() {
+    window.momentum = parseFloat(document.getElementById('momentum').value);
+});
+document.getElementById('epochs').addEventListener('input', function() {
+    window.epochs = parseInt(document.getElementById('epochs').value);
+});
+document.getElementById('earlystopping').addEventListener('input', function() {
+    window.earlyStopping = parseFloat(document.getElementById('earlystopping').value);
+});
 document.getElementById('resetButton').addEventListener('click', () => {
+    // Log all window variables before reset
+    console.log({
+        layernumber: window.layernumber,
+        activationtype: window.activationtype,
+        initmethod: window.initmethod,
+        neuronCounts: window.neuronCounts,
+        learningRate: window.learningRate,
+        momentum: window.momentum,
+        epochs: window.epochs,
+        earlyStopping: window.earlyStopping,
+        points: window.points,
+        predictionMesh: window.predictionMesh,
+        scene: window.scene,
+        THREE: window.THREE
+    });
+
+    // Reset all window variables except scene and THREE
+    window.layernumber = 1;
+    window.activationtype = 'relu';
+    window.initmethod = 'glorot';
+    window.neuronCounts = [2];
+    neuronCounts = [2]; // Also reset local variable for consistency
+    window.learningRate = 0.01;
+    window.momentum = 0.9;
+    window.epochs = 100;
+    window.earlyStopping = 0.01;
+    window.points = [];
+    window.predictionMesh = null;
+    // window.scene and window.THREE are preserved
+
     // Force re-initialization on next draw call
     lastNetworkStructure = "";
     drawNetwork();
 });
 
-// Initial draw
+//-------- Initial Draw --------//
 drawNetwork();
