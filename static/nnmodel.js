@@ -12,7 +12,7 @@ let inputNeuronPositions = [];
 let weights = [];
 let biases = [];
 let layerSizes = [];
-let neuronCounts = [2];
+window.neuronCounts = [2];
 let lastNetworkStructure = "";
 
 //-------- Random Number Helper --------//
@@ -215,19 +215,17 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
         const minusBtn = document.createElement('button');
         minusBtn.textContent = '-';
         minusBtn.onclick = () => {
-            neuronCounts[layerIndex] = Math.max(1, neuronCounts[layerIndex] - 1);
-            window.neuronCounts = neuronCounts;
+            window.neuronCounts[layerIndex] = Math.max(1, window.neuronCounts[layerIndex] - 1);
             drawNetwork();
         };
 
         const countSpan = document.createElement('span');
-        countSpan.textContent = neuronCounts[layerIndex];
+        countSpan.textContent = window.neuronCounts[layerIndex];
 
         const plusBtn = document.createElement('button');
         plusBtn.textContent = '+';
         plusBtn.onclick = () => {
-            neuronCounts[layerIndex] = Math.min(16, neuronCounts[layerIndex] + 1);
-            window.neuronCounts = neuronCounts;
+            window.neuronCounts[layerIndex] = Math.min(16, window.neuronCounts[layerIndex] + 1);
             drawNetwork();
         };
 
@@ -249,17 +247,15 @@ function drawNetwork() {
     const activation = window.activationtype !== undefined ? window.activationtype : document.getElementById('activation').value;
     const initType = window.initmethod !== undefined ? window.initmethod : document.getElementById('initialization').value;
 
-    while (neuronCounts.length < numHiddenLayers) {
-        neuronCounts.push(2);
-        window.neuronCounts = neuronCounts;
+    while (window.neuronCounts.length < numHiddenLayers) {
+        window.neuronCounts.push(2);
     }
-    neuronCounts.length = numHiddenLayers;
-    window.neuronCounts = neuronCounts;
+    window.neuronCounts.length = numHiddenLayers;
 
     // A change in structure or init type will trigger re-initialization
-    const currentNetworkStructure = `${initType}-${JSON.stringify(neuronCounts)}`;
+    const currentNetworkStructure = `${initType}-${JSON.stringify(window.neuronCounts)}`;
     if (lastNetworkStructure !== currentNetworkStructure) {
-        initializeNetwork(neuronCounts, initType);
+        initializeNetwork(window.neuronCounts, initType);
         lastNetworkStructure = currentNetworkStructure;
     }
 
@@ -336,8 +332,14 @@ canvas.addEventListener('click', (event) => {
 //-------- UI Event Listeners --------//
 document.getElementById('layers').addEventListener('input', function() {
     window.layernumber = Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
-    // Set window.neuronCounts to an array of 2s by default for the new layer number
-    window.neuronCounts = Array(window.layernumber).fill(2);
+    // Only add or remove layers, preserve neuron counts in existing layers
+    if (window.neuronCounts.length < window.layernumber) {
+        while (window.neuronCounts.length < window.layernumber) {
+            window.neuronCounts.push(2);
+        }
+    } else if (window.neuronCounts.length > window.layernumber) {
+        window.neuronCounts.length = window.layernumber;
+    }
     drawNetwork();
 });
 document.getElementById('activation').addEventListener('change', function() {
@@ -368,7 +370,7 @@ document.getElementById('resetButton').addEventListener('click', () => {
         layernumber: window.layernumber,
         activationtype: window.activationtype,
         initmethod: window.initmethod,
-        neuronCounts: window.neuronCounts,
+    neuronCounts: window.neuronCounts,
         learningRate: window.learningRate,
         momentum: window.momentum,
         epochs: window.epochs,
@@ -381,10 +383,10 @@ document.getElementById('resetButton').addEventListener('click', () => {
 
     // Reset all window variables except scene and THREE
     window.layernumber = 1;
+    document.getElementById('layers').value = 1;
     window.activationtype = 'relu';
     window.initmethod = 'glorot';
     window.neuronCounts = [2];
-    neuronCounts = [2]; // Also reset local variable for consistency
     window.learningRate = 0.01;
     window.momentum = 0.9;
     window.epochs = 100;
