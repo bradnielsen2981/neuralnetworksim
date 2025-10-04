@@ -216,6 +216,7 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
         minusBtn.textContent = '-';
         minusBtn.onclick = () => {
             window.neuronCounts[layerIndex] = Math.max(1, window.neuronCounts[layerIndex] - 1);
+            initializeNetwork(window.neuronCounts, window.initmethod);
             drawNetwork();
         };
 
@@ -226,6 +227,7 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
         plusBtn.textContent = '+';
         plusBtn.onclick = () => {
             window.neuronCounts[layerIndex] = Math.min(16, window.neuronCounts[layerIndex] + 1);
+            initializeNetwork(window.neuronCounts, window.initmethod);
             drawNetwork();
         };
 
@@ -245,20 +247,9 @@ function drawNetwork() {
     // Use global window variables for network configuration
     const numHiddenLayers = window.layernumber !== undefined ? window.layernumber : Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
     const activation = window.activationtype !== undefined ? window.activationtype : document.getElementById('activation').value;
-    const initType = window.initmethod !== undefined ? window.initmethod : document.getElementById('initialization').value;
 
-    while (window.neuronCounts.length < numHiddenLayers) {
-        window.neuronCounts.push(2);
-    }
-    window.neuronCounts.length = numHiddenLayers;
-
-    // A change in structure or init type will trigger re-initialization
-    const currentNetworkStructure = `${initType}-${JSON.stringify(window.neuronCounts)}`;
-    if (lastNetworkStructure !== currentNetworkStructure) {
-        initializeNetwork(window.neuronCounts, initType);
-        lastNetworkStructure = currentNetworkStructure;
-    }
-
+    // Build layerSizes from window.neuronCounts
+    const layerSizes = [2, ...window.neuronCounts, 1];
     const { outputs, preActivations } = forwardPass(layerSizes, activation);
 
     const totalLayers = layerSizes.length;
@@ -340,14 +331,17 @@ document.getElementById('layers').addEventListener('input', function() {
     } else if (window.neuronCounts.length > window.layernumber) {
         window.neuronCounts.length = window.layernumber;
     }
+    initializeNetwork(window.neuronCounts, window.initmethod);
     drawNetwork();
 });
 document.getElementById('activation').addEventListener('change', function() {
     window.activationtype = document.getElementById('activation').value;
+    initializeNetwork(window.neuronCounts, window.initmethod);
     drawNetwork();
 });
 document.getElementById('initialization').addEventListener('change', function() {
     window.initmethod = document.getElementById('initialization').value;
+    initializeNetwork(window.neuronCounts, window.initmethod);
     drawNetwork();
 });
 
@@ -395,10 +389,13 @@ document.getElementById('resetButton').addEventListener('click', () => {
     window.predictionMesh = null;
     // window.scene and window.THREE are preserved
 
-    // Force re-initialization on next draw call
-    lastNetworkStructure = "";
+    const initType = window.initmethod !== undefined ? window.initmethod : document.getElementById('initialization').value;
+    initializeNetwork(window.neuronCounts, initType);
+    
     drawNetwork();
 });
 
 //-------- Initial Draw --------//
+
+initializeNetwork(window.neuronCounts, window.initmethod);
 drawNetwork();
