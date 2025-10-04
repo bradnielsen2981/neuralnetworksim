@@ -15,3 +15,5 @@ window.THREE = null; // Used by main.js and nncalc.js for Three.js
 window.predictionMesh = null; // Used by nncalc.js for prediction mesh
 
 // You can add other global variables here as needed
+window.weights = [];
+window.biases = [];

@@ -9,8 +9,8 @@ let inputZ = 1; // Z input
 let inputNeuronPositions = [];
 
 //-------- Network State Variables --------//
-let weights = [];
-let biases = [];
+//-------- Network State Variables --------//
+// weights and biases are now global (window.weights, window.biases)
 let layerSizes = [];
 window.neuronCounts = [2];
 let lastNetworkStructure = "";
@@ -40,21 +40,21 @@ function getNormalRandom() {
 function initializeNetwork(hiddenNeuronCounts, initType) {
     layerSizes = [2, ...hiddenNeuronCounts, 1];
 
-    weights = [];
-    biases = [];
+    window.weights = [];
+    window.biases = [];
     for (let l = 0; l < layerSizes.length - 1; l++) {
-        weights.push([]);
-        biases.push([]);
+        window.weights.push([]);
+        window.biases.push([]);
         const fan_in = layerSizes[l];
         const fan_out = layerSizes[l + 1];
 
         for (let i = 0; i < fan_out; i++) {
-            weights[l].push([]);
+            window.weights[l].push([]);
             let bias = 0;
             if (initType === 'random') {
                 bias = Math.random() * 2 - 1;
             }
-            biases[l].push(bias);
+            window.biases[l].push(bias);
 
             for (let j = 0; j < fan_in; j++) {
                 let weight = 0;
@@ -71,7 +71,7 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
                         weight = Math.random() * 2 - 1;
                         break;
                 }
-                weights[l][i].push(weight);
+                window.weights[l][i].push(weight);
             }
         }
     }
@@ -186,9 +186,9 @@ function forwardPass(layerSizes, activation) {
         let layerOutput = [];
         let layerPreAct = [];
         for (let i = 0; i < layerSizes[l]; i++) {
-            let sum = biases[l - 1][i];
+            let sum = window.biases[l - 1][i];
             for (let j = 0; j < layerSizes[l - 1]; j++) {
-                sum += outputs[l - 1][j] * weights[l - 1][i][j];
+                sum += outputs[l - 1][j] * window.weights[l - 1][i][j];
             }
             layerPreAct.push(sum);
             layerOutput.push(activate(sum, activation));
@@ -281,7 +281,7 @@ function drawNetwork() {
         const x2 = leftOffset + (l + 1) * layerSpacing;
         for (let i = 0; i < layerSizes[l]; i++) {
             for (let j = 0; j < layerSizes[l + 1]; j++) {
-                drawConnection(x1, (i + 1) * neuronSpacing1, x2, (j + 1) * neuronSpacing2, weights[l][j][i], biases[l][j], i);
+                drawConnection(x1, (i + 1) * neuronSpacing1, x2, (j + 1) * neuronSpacing2, window.weights[l][j][i], window.biases[l][j], i);
             }
         }
     }
