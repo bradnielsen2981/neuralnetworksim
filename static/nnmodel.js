@@ -7,6 +7,7 @@ let neuronRadius = 40; // Will be dynamically set based on neuron count
 let inputX = 1; // X input
 let inputZ = 1; // Z input
 let inputNeuronPositions = [];
+let hoveredInputNeuronIndex = null; // Track hovered input neuron
 
 //-------- Network State Variables --------//
 //-------- Network State Variables --------//
@@ -91,7 +92,12 @@ function activate(x, activation) {
 function drawInputNeuron(x, y, label, inputIndex) {
     ctx.beginPath();
     ctx.arc(x, y, neuronRadius, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
+    // Highlight if hovered
+    if (hoveredInputNeuronIndex === inputIndex) {
+        ctx.fillStyle = '#39ff14'; // Bright green
+    } else {
+        ctx.fillStyle = '#fff';
+    }
     ctx.fill();
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 2;
@@ -110,9 +116,9 @@ function drawInputNeuron(x, y, label, inputIndex) {
 function drawNeuron(x, y, activation, inputVal, outputVal) {
     ctx.beginPath();
     ctx.arc(x, y, neuronRadius, 0, Math.PI * 2);
-    ctx.fillStyle = '#cce';
+    ctx.fillStyle = '#007fff'; // Azure blue
     ctx.fill();
-    ctx.strokeStyle = '#333';
+    ctx.strokeStyle = '#000'; // Crisp black
     ctx.lineWidth = 2;
     ctx.stroke();
 
@@ -135,17 +141,17 @@ function drawNeuron(x, y, activation, inputVal, outputVal) {
     }
     ctx.moveTo(points[0].x + x, points[0].y + y);
     for (let p of points) ctx.lineTo(p.x + x, p.y + y);
-    ctx.strokeStyle = '#333';
+    ctx.strokeStyle = '#000'; // Crisp black
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Input/Output text inside neuron
-    ctx.fillStyle = '#000';
+    // Input/Output numbers only, font color white
+    ctx.fillStyle = '#fff';
     ctx.font = `${Math.max(8, Math.floor(neuronRadius * 0.45))}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`I: ${inputVal.toFixed(2)}`, x - neuronRadius * 0.5 + 8, y - neuronRadius * 0.5 + 3);
-    ctx.fillText(`O: ${outputVal.toFixed(2)}`, x + neuronRadius * 0.5 - 12, y + neuronRadius * 0.5 + 3);
+    ctx.fillText(`${inputVal.toFixed(2)}`, x - neuronRadius * 0.5 + 8, y - neuronRadius * 0.5 + 3);
+    ctx.fillText(`${outputVal.toFixed(2)}`, x + neuronRadius * 0.5 - 12, y + neuronRadius * 0.5 + 3);
 }
 
 // Draw connections
@@ -153,7 +159,7 @@ function drawConnection(x1, y1, x2, y2, weight, bias, inputIndex) {
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
-    ctx.strokeStyle = '#aaa';
+    ctx.strokeStyle = '#000'; // Crisp black
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -271,6 +277,10 @@ function drawNetwork() {
     // Build layerSizes from window.neuronCounts
     const layerSizes = [2, ...window.neuronCounts, 1];
     const { outputs, preActivations } = forwardPass(layerSizes, activation);
+    // Save output value to window.y
+    if (outputs && outputs.length > 0 && outputs[outputs.length - 1].length > 0) {
+        window.y = outputs[outputs.length - 1][0];
+    }
 
     const totalLayers = layerSizes.length;
     const totalSpacing = canvas.width - 100;
@@ -327,16 +337,75 @@ canvas.addEventListener('click', (event) => {
             if (newValue !== null) {
                 const parsedValue = parseFloat(newValue);
                 if (!isNaN(parsedValue)) {
+                    let updated = false;
                     if (neuron.index === 0) {
                         inputX = parsedValue;
+                        window.x = parsedValue;
+                        updated = true;
                     } else {
                         inputZ = parsedValue;
+                        window.z = parsedValue;
+                        updated = true;
                     }
+                    // After setting, do a forward pass and redraw
                     drawNetwork();
+                    if (updated) {
+                        addRedPointToThree(window.x, window.y, window.z);
+                    }
                 }
             }
             return; // Exit loop after handling a click
         }
+    }
+
+// Helper to add a red point in THREE.js canvas
+function addRedPointToThree(x, y, z) {
+    if (!window.scene || !window.THREE) return;
+    // Remove previous red point if exists
+    if (window.redPoint) {
+        window.scene.remove(window.redPoint);
+        window.redPoint.geometry.dispose();
+        window.redPoint.material.dispose();
+        window.redPoint = null;
+    }
+    // Try to match the size of other points (use predictionMesh or default to 0.15)
+    let sphereRadius = 0.35;
+    if (window.predictionMesh && window.predictionMesh.geometry && window.predictionMesh.geometry.parameters && window.predictionMesh.geometry.parameters.radius) {
+        sphereRadius = window.predictionMesh.geometry.parameters.radius;
+    }
+    const geometry = new window.THREE.SphereGeometry(sphereRadius, 16, 16);
+    const material = new window.THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const sphere = new window.THREE.Mesh(geometry, material);
+    sphere.position.set(x, y, z);
+    window.scene.add(sphere);
+    window.redPoint = sphere;
+}
+});
+
+//-------- Canvas Mouse Move Event Listener for Highlight --------//
+canvas.addEventListener('mousemove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    let found = null;
+    for (const neuron of inputNeuronPositions) {
+        const distance = Math.sqrt(Math.pow(mouseX - neuron.x, 2) + Math.pow(mouseY - neuron.y, 2));
+        if (distance <= neuron.radius) {
+            found = neuron.index;
+            break;
+        }
+    }
+    if (hoveredInputNeuronIndex !== found) {
+        hoveredInputNeuronIndex = found;
+        drawNetwork();
+    }
+});
+
+// Remove highlight when mouse leaves canvas
+canvas.addEventListener('mouseleave', () => {
+    if (hoveredInputNeuronIndex !== null) {
+        hoveredInputNeuronIndex = null;
+        drawNetwork();
     }
 });
 
