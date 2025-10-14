@@ -32,65 +32,121 @@ function getLearningParams() {
     };
 }
 
-// Build and train the model
 async function trainModelFromUI() {
-    // Removed alert
-    // Get network structure from nnmodel.js controls
+
+    alert('Training started...');
     const neuronCounts = getNetworkStructure();
     const activation = getActivation();
     const { learningRate, momentum, epochs } = getLearningParams();
 
-    // Prepare data from main.js points
+    // Prepare training data
     const points = getPointsData();
     if (!points.length) {
-    // Removed alert
+        alert('No training points found. Please add points before training.');
         return;
     }
-    // Removed console.log
 
-    // X: [ [x, z], ... ]   Y: [ [y], ... ]
     const xs = points.map(pt => [pt.x, pt.z]);
     const ys = points.map(pt => [pt.y]);
-        // Print each training point in the requested format
-        xs.forEach((input, i) => {
-            // Removed console.log
-        });
 
-    // Build model with the same structure as nnmodel.js
+    // === Build model ===
     const model = tf.sequential();
     if (neuronCounts.length > 0) {
-        // First hidden layer with input shape
         model.add(tf.layers.dense({
             units: neuronCounts[0],
             inputShape: [2],
             activation: activation
         }));
-        // Additional hidden layers
         for (let i = 1; i < neuronCounts.length; i++) {
             model.add(tf.layers.dense({
                 units: neuronCounts[i],
                 activation: activation
             }));
         }
-        // Output layer
         model.add(tf.layers.dense({ units: 1 }));
     } else {
-        // No hidden layers, just input to output
         model.add(tf.layers.dense({ units: 1, inputShape: [2] }));
     }
 
-    // Compile
+    // === Pre-load diagnostic ===
+    console.log("=== Pre-Load Diagnostic ===");
+    if (Array.isArray(window.weights) && Array.isArray(window.biases)) {
+        window.weights.forEach((w, idx) => {
+            console.log(`Layer ${idx} stored weight shape: [${w.length}, ${w[0]?.length}]`);
+            console.log(`Sample weights:`, w.slice(0, 3));
+        });
+        window.biases.forEach((b, idx) => {
+            console.log(`Layer ${idx} stored bias length: ${b.length}`);
+            console.log(`Sample biases:`, b.slice(0, 3));
+        });
+    }
+
+    // === Load stored weights safely ===
+    if (Array.isArray(window.weights) && Array.isArray(window.biases)) {
+        const layers = model.layers;
+        for (let i = 0; i < layers.length; i++) {
+            const layer = layers[i];
+            if (layer.getWeights) {
+                const currentWeights = layer.getWeights();
+
+                // Transpose stored weights to match TensorFlow's [fan_in, fan_out]
+                let w = window.weights[i] ? tf.transpose(tf.tensor(window.weights[i])) : currentWeights[0];
+                let b = window.biases[i] ? tf.tensor(window.biases[i]) : currentWeights[1];
+
+                console.log(`Layer ${i} applying weight shape:`, w.shape);
+                console.log(`Layer ${i} applying bias shape:`, b.shape);
+
+                const weightShapeMatches =
+                    w.shape.length === currentWeights[0].shape.length &&
+                    w.shape.every((dim, idx) => dim === currentWeights[0].shape[idx]);
+
+                const biasShapeMatches =
+                    b.shape.length === currentWeights[1].shape.length &&
+                    b.shape.every((dim, idx) => dim === currentWeights[1].shape[idx]);
+
+                if (weightShapeMatches && biasShapeMatches) {
+                    layer.setWeights([w, b]);
+                } else {
+                    alert(`Network weights/biases shape mismatch for layer ${i}. Using default weights.`);
+                    console.log("Expected weights:", currentWeights[0].shape, "Biases:", currentWeights[1].shape);
+                    console.log("Got weights:", w.shape, "Biases:", b.shape);
+                }
+            }
+        }
+    }
+
+    // === Compile model ===
     model.compile({
         loss: 'meanSquaredError',
         optimizer: tf.train.sgd(learningRate)
     });
 
-    // Train
+    // === Train model ===
     await model.fit(tf.tensor2d(xs), tf.tensor2d(ys), { epochs });
-    // Removed alert
+    alert('Training complete!');
 
-    // === Generate prediction mesh and add to Three.js scene ===
-    // Remove previous prediction mesh if it exists
+    // === Save weights for drawNetwork ===
+    window.weights = [];
+    window.biases = [];
+    for (const layer of model.layers) {
+        if (layer.getWeights) {
+            const weights = layer.getWeights();
+            // Transpose back to [fan_out][fan_in] for drawNetwork
+            const wArray = tf.transpose(weights[0]).arraySync(); 
+            const bArray = weights[1].arraySync();
+            window.weights.push(wArray);
+            window.biases.push(bArray);
+
+            console.log("Saved Layer weights shape:", wArray.length, "x", wArray[0]?.length, "Bias shape:", bArray.length);
+        }
+    }
+
+    // === Redraw network ===
+    if (typeof window.redrawNetwork === 'function') {
+        window.redrawNetwork();
+    }
+
+    // === Generate prediction mesh for Three.js ===
     if (window.predictionMesh && window.scene) {
         window.scene.remove(window.predictionMesh);
         window.predictionMesh.geometry.dispose();
@@ -98,35 +154,28 @@ async function trainModelFromUI() {
         window.predictionMesh = null;
     }
 
-    // Access the Three.js scene from main.js
     if (window.scene && window.THREE) {
-
-    // Removed alert
-        const step = 1; // grid step size
+        const step = 1;
         const xMin = -20, xMax = 20, zMin = -20, zMax = 20;
         const xCount = Math.floor((xMax - xMin) / step) + 1;
         const zCount = Math.floor((zMax - zMin) / step) + 1;
         const geometry = new window.THREE.BufferGeometry();
         const vertices = [];
         const colors = [];
-        // Predict y for each (x, z)
+
         for (let xi = 0; xi < xCount; xi++) {
             for (let zi = 0; zi < zCount; zi++) {
                 const x = xMin + xi * step;
                 const z = zMin + zi * step;
                 const y = (await model.predict(window.tf.tensor2d([[x, z]])).array())[0][0];
-                    // Print prediction in requested format
-                    // Removed console.log
                 vertices.push(x, y, z);
-                // Dark green color
                 colors.push(0.1, 0.4, 0.1);
             }
         }
-            // Removed console.log
+
         geometry.setAttribute('position', new window.THREE.Float32BufferAttribute(vertices, 3));
         geometry.setAttribute('color', new window.THREE.Float32BufferAttribute(colors, 3));
 
-        // Create faces (triangles)
         const indices = [];
         for (let xi = 0; xi < xCount - 1; xi++) {
             for (let zi = 0; zi < zCount - 1; zi++) {
@@ -134,7 +183,6 @@ async function trainModelFromUI() {
                 const b = (xi + 1) * zCount + zi;
                 const c = (xi + 1) * zCount + (zi + 1);
                 const d = xi * zCount + (zi + 1);
-                // Two triangles per quad
                 indices.push(a, b, d);
                 indices.push(b, c, d);
             }
@@ -153,9 +201,10 @@ async function trainModelFromUI() {
         window.scene.add(mesh);
         window.predictionMesh = mesh;
     }
-
-    
 }
+
+
+
 
 // Attach event listener to train button
 document.getElementById('train-btn').addEventListener('click', trainModelFromUI);

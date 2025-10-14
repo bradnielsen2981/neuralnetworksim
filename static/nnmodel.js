@@ -38,6 +38,7 @@ function getNormalRandom() {
 
 //-------- Network Initialization --------//
 function initializeNetwork(hiddenNeuronCounts, initType) {
+    //alert('Reinitializing network weights and biases...');
     layerSizes = [2, ...hiddenNeuronCounts, 1];
 
     window.weights = [];
@@ -182,11 +183,30 @@ function forwardPass(layerSizes, activation) {
     outputs.push([inputX, inputZ]);
     preActivations.push([inputX, inputZ]);
 
+    // Validate weights and biases shape
     for (let l = 1; l < layerSizes.length; l++) {
+        if (!window.weights[l - 1] || !window.biases[l - 1]) {
+            alert('Network weights/biases are not initialized for layer ' + (l - 1) + '. Reinitializing network.');
+            initializeNetwork(window.neuronCounts, window.initmethod);
+            return { outputs: [], preActivations: [] };
+        }
+        if (
+            window.weights[l - 1].length !== layerSizes[l] ||
+            window.biases[l - 1].length !== layerSizes[l]
+        ) {
+            alert('Network weights/biases shape mismatch for layer ' + (l - 1) + '. Reinitializing network.');
+            initializeNetwork(window.neuronCounts, window.initmethod);
+            return { outputs: [], preActivations: [] };
+        }
         let layerOutput = [];
         let layerPreAct = [];
         for (let i = 0; i < layerSizes[l]; i++) {
             let sum = window.biases[l - 1][i];
+            if (!window.weights[l - 1][i] || window.weights[l - 1][i].length !== layerSizes[l - 1]) {
+                alert('Network weights shape mismatch for neuron ' + i + ' in layer ' + (l - 1) + '. Reinitializing network.');
+                initializeNetwork(window.neuronCounts, window.initmethod);
+                return { outputs: [], preActivations: [] };
+            }
             for (let j = 0; j < layerSizes[l - 1]; j++) {
                 sum += outputs[l - 1][j] * window.weights[l - 1][i][j];
             }
@@ -359,21 +379,8 @@ document.getElementById('earlystopping').addEventListener('input', function() {
     window.earlyStopping = parseFloat(document.getElementById('earlystopping').value);
 });
 document.getElementById('resetButton').addEventListener('click', () => {
-    // Log all window variables before reset
-    console.log({
-        layernumber: window.layernumber,
-        activationtype: window.activationtype,
-        initmethod: window.initmethod,
-    neuronCounts: window.neuronCounts,
-        learningRate: window.learningRate,
-        momentum: window.momentum,
-        epochs: window.epochs,
-        earlyStopping: window.earlyStopping,
-        points: window.points,
-        predictionMesh: window.predictionMesh,
-        scene: window.scene,
-        THREE: window.THREE
-    });
+    // Removed console.log
+    // ...existing code...
 
     // Reset all window variables except scene and THREE
     window.layernumber = 1;
@@ -397,5 +404,11 @@ document.getElementById('resetButton').addEventListener('click', () => {
 
 //-------- Initial Draw --------//
 
+
 initializeNetwork(window.neuronCounts, window.initmethod);
 drawNetwork();
+
+// Expose redrawNetwork globally
+window.redrawNetwork = function() {
+    drawNetwork();
+};
