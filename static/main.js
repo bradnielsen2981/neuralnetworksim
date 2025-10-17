@@ -195,10 +195,13 @@ function onMouseMove(event) {
     if (point) {
         const snappedX = snapToGrid(point.x);
         const snappedZ = snapToGrid(point.z);
-
-        // Center the sphere at the grid point (Y = 0)
-        hoverSphere.position.set(snappedX, 0, snappedZ);
-        hoverSphere.visible = true;
+        // Restrict hover to -26 < x < 26 and -26 < z < 26
+        if (snappedX > -26 && snappedX < 26 && snappedZ > -26 && snappedZ < 26) {
+            hoverSphere.position.set(snappedX, 0, snappedZ);
+            hoverSphere.visible = true;
+        } else {
+            hoverSphere.visible = false;
+        }
     } else {
         hoverSphere.visible = false;
     }
@@ -487,13 +490,15 @@ function onClick(event) {
     if (!hoverSphere.visible) return;
 
     // Clamp z to [-20, 20] for placement, y starts at 0
-    const clampedZ = Math.max(-20, Math.min(20, hoverSphere.position.z));
     const x = hoverSphere.position.x;
-    const z = clampedZ;
+    const z = hoverSphere.position.z;
+    // Restrict new point creation to -26 < x < 26 and -26 < z < 26
+    if (!(x > -26 && x < 26 && z > -26 && z < 26)) {
+        return;
+    }
     // Prevent duplicate xz positions
     const duplicate = points.some(pt => Math.abs(pt.x - x) < 1e-6 && Math.abs(pt.z - z) < 1e-6);
     if (duplicate) {
-    // Removed alert
         return;
     }
 
