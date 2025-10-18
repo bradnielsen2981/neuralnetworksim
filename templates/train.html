@@ -9,7 +9,59 @@
 			<div class="modal-body" id="training-modal-body">
 				<p>Training in progress...<br>
 				You can add more details here, such as a progress bar, logs, or results.</p>
+				
+				<!-- Add a canvas element for the Chart.js demo -->
+				<canvas id="demoChart" width="400" height="200"></canvas>
 			</div>
 		</div>
 	</div>
 </div>
+
+<script>
+    // Create a chart to model a loss function using Chart.js
+    const chartContext = document.getElementById('demoChart').getContext('2d');
+    const lossChart = new Chart(chartContext, {
+        type: 'line',
+        data: {
+            labels: [], // Initialize with empty labels, to be updated dynamically
+            datasets: [{
+                label: 'Loss Function',
+                data: [], // Initialize with empty data, to be updated dynamically
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Epochs'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Loss'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Function to update the chart dynamically
+    function updateLossChart(epoch, loss) {
+        lossChart.data.labels.push(epoch);
+        lossChart.data.datasets[0].data.push(loss);
+        lossChart.update();
+    }
+</script>

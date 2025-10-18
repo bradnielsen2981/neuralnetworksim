@@ -21,6 +21,8 @@
   <!-- FontAwesome -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
   <link rel="stylesheet" href="static/custom.css">
+  <!-- Add Chart.js CDN link -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-light">
 <div class="container-fluid py-3">
@@ -82,6 +84,10 @@
   <!-- NN HTML outside the Bootstrap columns, but inside a row -->
   <div class="row mb-3">
     {% include 'nn.html' %}
+  </div>
+  <div class="row mb-3" id="training-section">
+      <!-- Training Modal Popup (Flask include) -->
+    {% include 'train.html' %}
   </div>
 
 </div>

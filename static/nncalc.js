@@ -199,7 +199,12 @@ async function trainModelFromUI() {
         if (modal) {
             const modalBody = document.getElementById('training-modal-body');
             if (modalBody) {
-                modalBody.innerHTML = '<p>Training complete.</p>';
+                
+                // When training is complete, add a div below the existing content
+                const trainingCompleteDiv = document.createElement('div');
+                trainingCompleteDiv.textContent = 'Training Complete';
+                trainingCompleteDiv.style.marginTop = '10px';
+                document.getElementById('training-modal-body').appendChild(trainingCompleteDiv);
             }
         }
 
