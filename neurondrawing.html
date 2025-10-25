@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Neuron with Bias (Restored Clean Version)</title>
+<style>
+  canvas {
+    background: #f5f5f5;
+  }
+</style>
+</head>
+<body>
+<canvas id="neuronCanvas" width="500" height="250"></canvas>
+
+<script>
+const canvas = document.getElementById("neuronCanvas");
+const ctx = canvas.getContext("2d");
+
+// Data
+const bias = 0.8;
+const inputValue = 2.5;
+const outputValue = Math.max(0, inputValue * 0.7 + bias);
+
+// Geometry
+const neuronX = 400;
+const neuronY = 125;
+const neuronRadius = 40;
+// Place the convergence much closer to the neuron so the merged segment is ~15px
+const convergeLineLength = 15; // length of the single, merged line segment before the neuron
+const connectEndX = neuronX - neuronRadius; // where the connection meets the neuron circle
+const convergeX = connectEndX - convergeLineLength;
+const convergeY = neuronY;
+// Fixed bias label anchor relative to neuron
+const biasLabelOffset = 40; // px left from neuron edge (moved 10px further left)
+const biasLabelX = neuronX - neuronRadius - biasLabelOffset;
+
+// --- Draw 3 input lines converging ---
+ctx.strokeStyle = "black";
+ctx.lineWidth = 2;
+
+for (let offset of [-40, 0, 40]) {
+  ctx.beginPath();
+  ctx.moveTo(100, convergeY + offset);
+  ctx.lineTo(convergeX, convergeY);
+  ctx.stroke();
+}
+
+// --- Line from convergence to neuron (touch circle) ---
+ctx.beginPath();
+ctx.moveTo(convergeX, convergeY);
+ctx.lineTo(connectEndX, neuronY);
+ctx.stroke();
+
+// --- "Bias" label above the connecting line ---
+ctx.fillStyle = "red";
+ctx.font = "16px Arial";
+ctx.textAlign = "center";
+ctx.fillText(
+  "Bias: " + bias.toFixed(2),
+  biasLabelX,
+  neuronY - 20
+);
+
+// --- Draw neuron outline (thicker border) ---
+ctx.beginPath();
+ctx.arc(neuronX, neuronY, neuronRadius, 0, 2 * Math.PI);
+ctx.strokeStyle = "black";
+ctx.lineWidth = 3;
+ctx.stroke();
+
+// --- Define ReLU split line (shift left by 5 px) ---
+const reluFlatStartX = neuronX - neuronRadius * 0.8 - 2.5 - 5;  // extend left and shift
+const reluFlatY = neuronY + neuronRadius * 0.15;
+const reluCornerX = neuronX - neuronRadius * 0.2 - 5;          // shift
+const reluCornerY = neuronY + neuronRadius * 0.15;
+const reluEndX = neuronX + neuronRadius * 0.8 + 2.5 - 5;        // extend right and shift
+const reluEndY = neuronY - neuronRadius * 0.6;
+// Make blue region wider on right side (6px total)
+const reluEndXBlue = reluEndX + 7;
+
+// --- Draw top region (bright green) ---
+ctx.save();
+ctx.beginPath();
+ctx.arc(neuronX, neuronY, neuronRadius + 1, 0, 2 * Math.PI);
+ctx.clip();
+ctx.beginPath();
+ctx.moveTo(reluFlatStartX, reluFlatY);
+ctx.lineTo(reluCornerX, reluCornerY);
+ctx.lineTo(reluEndX, reluEndY);
+ctx.lineTo(neuronX + neuronRadius + 2, neuronY - neuronRadius - 2);
+ctx.lineTo(neuronX - neuronRadius - 2, neuronY - neuronRadius - 2);
+ctx.closePath();
+ctx.fillStyle = "#00cc00"; // bright green
+ctx.fill();
+ctx.restore();
+
+// --- Draw bottom region (bright blue) ---
+ctx.save();
+ctx.beginPath();
+ctx.arc(neuronX, neuronY, neuronRadius + 1, 0, 2 * Math.PI);
+ctx.clip();
+ctx.beginPath();
+ctx.moveTo(reluFlatStartX, reluFlatY);
+ctx.lineTo(reluCornerX, reluCornerY);
+ctx.lineTo(reluEndXBlue, reluEndY);
+ctx.lineTo(neuronX + neuronRadius + 2, neuronY + neuronRadius + 2);
+ctx.lineTo(neuronX - neuronRadius - 2, neuronY + neuronRadius + 2);
+ctx.closePath();
+ctx.fillStyle = "#0077ff"; // bright blue
+ctx.fill();
+ctx.restore();
+
+// --- Draw ReLU line (yellow, thin but wider) ---
+ctx.beginPath();
+ctx.moveTo(reluFlatStartX, reluFlatY);
+ctx.lineTo(reluCornerX, reluCornerY);
+ctx.lineTo(reluEndX, reluEndY);
+ctx.strokeStyle = "yellow";
+ctx.lineWidth = 2; // thin line
+ctx.lineJoin = "round";
+ctx.stroke();
+
+// --- Redraw circle border last ---
+ctx.beginPath();
+ctx.arc(neuronX, neuronY, neuronRadius, 0, 2 * Math.PI);
+ctx.strokeStyle = "black";
+ctx.lineWidth = 3;
+ctx.stroke();
+
+// --- Input/Output text ---
+ctx.fillStyle = "black";
+ctx.font = "14px Arial";
+ctx.textAlign = "center";
+ctx.fillText("In: " + inputValue.toFixed(1), neuronX, neuronY - 20);
+ctx.fillText("Out: " + outputValue.toFixed(1), neuronX, neuronY + 30);
+</script>
+</body>
+</html>

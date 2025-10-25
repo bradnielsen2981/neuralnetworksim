@@ -177,8 +177,6 @@ function drawConnection(x1, y1, x2, y2, weight, bias, inputIndex) {
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(`w=${weight.toFixed(2)}`, 0, -6);
-    ctx.fillStyle = 'red';
-    ctx.fillText(`b=${bias.toFixed(2)}`, 0, 6);
     ctx.restore();
 }
 
@@ -294,16 +292,47 @@ function drawNetwork() {
 
     drawLayerControls(totalLayers, layerSpacing, leftOffset);
 
-    // Draw connections first
+    // Draw connections with convergence per target neuron and bias only after convergence
     for (let l = 0; l < totalLayers - 1; l++) {
         const neuronSpacing1 = canvas.height / (layerSizes[l] + 1);
         const neuronSpacing2 = canvas.height / (layerSizes[l + 1] + 1);
         const x1 = leftOffset + l * layerSpacing;
         const x2 = leftOffset + (l + 1) * layerSpacing;
-        for (let i = 0; i < layerSizes[l]; i++) {
-            for (let j = 0; j < layerSizes[l + 1]; j++) {
-                drawConnection(x1, (i + 1) * neuronSpacing1, x2, (j + 1) * neuronSpacing2, window.weights[l][j][i], window.biases[l][j], i);
+    // Gap before neuron edge where incoming lines converge (short segment to neuron)
+    // Move convergence closer to the next neuron: use a short fixed gap (~15px)
+    const convergeGap = 15;
+        for (let j = 0; j < layerSizes[l + 1]; j++) {
+            const y2 = (j + 1) * neuronSpacing2;
+            const convergeX = x2 - neuronRadius - convergeGap;
+            // Incoming lines from all source neurons converge to (convergeX, y2)
+            for (let i = 0; i < layerSizes[l]; i++) {
+                const y1 = (i + 1) * neuronSpacing1;
+                drawConnection(
+                    x1,
+                    y1,
+                    convergeX,
+                    y2,
+                    window.weights[l][j][i],
+                    window.biases[l][j],
+                    i
+                );
             }
+            // Short line from convergence point to neuron edge
+            const connectEndX = x2 - neuronRadius; // cut at neuron border
+            ctx.beginPath();
+            ctx.moveTo(convergeX, y2);
+            ctx.lineTo(connectEndX, y2);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Bias label above the short connecting line (only once per target neuron)
+            const biasVal = window.biases[l][j];
+            ctx.fillStyle = 'red';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            const biasLabelX = connectEndX - 30; // anchor left of neuron edge
+            ctx.fillText(`b=${biasVal.toFixed(2)}`, biasLabelX, y2 - 10);
         }
     }
 
