@@ -332,17 +332,30 @@ function generateRandomPoints() {
     scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
     points.length = 0;
     const usedXZ = new Set();
+    const minDistance = 5; // Minimum allowed distance between any two points on XZ plane
+    const maxAttempts = 5000; // Safety cap to avoid infinite loops
     let count = 0;
-    while (count < 16) {
+    let attempts = 0;
+    while (count < 16 && attempts < maxAttempts) {
+        attempts++;
         // X and Z in grid range, snapped to grid
         const step = gridSize / gridDivisions;
         const x = snapToGrid((Math.random() - 0.5) * gridSize);
         const z = snapToGrid((Math.random() - 0.5) * gridSize);
         const key = `${x.toFixed(4)},${z.toFixed(4)}`;
         if (usedXZ.has(key)) continue;
+        // Enforce min-distance on XZ plane from all existing points
+        let tooClose = false;
+        for (const pt of points) {
+            const dx = x - pt.x;
+            const dz = z - pt.z;
+            if (Math.hypot(dx, dz) < minDistance) { tooClose = true; break; }
+        }
+        if (tooClose) continue;
+
         usedXZ.add(key);
-        // y in [-10, 10]
-        const y = Math.random() * 20 - 10;
+    // y in [-5, 5]
+    const y = Math.random() * 10 - 5;
         points.push({ x, y, z, class: 'Yellow' });
         // Add sphere
         const sphere = new THREE.Mesh(
@@ -352,6 +365,9 @@ function generateRandomPoints() {
         sphere.position.set(x, y, z);
         scene.add(sphere);
         count++;
+    }
+    if (attempts >= maxAttempts && count < 16) {
+        console.warn(`Only generated ${count} random points due to min-distance constraint of ${minDistance}.`);
     }
     renderPointsTable();
 }

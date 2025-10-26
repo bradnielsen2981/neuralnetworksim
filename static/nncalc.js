@@ -26,7 +26,8 @@ function getLearningParams() {
         learningRate: parseFloat(document.getElementById('learning-rate').value),
         momentum: parseFloat(document.getElementById('momentum').value),
         epochs: parseInt(document.getElementById('epochs').value),
-        earlyStopping: parseFloat(document.getElementById('earlystopping').value)
+        earlyStopping: parseFloat(document.getElementById('earlystopping').value),
+        patience: parseInt((document.getElementById('patience') && document.getElementById('patience').value) || 50)
     };
 }
 
@@ -35,7 +36,7 @@ async function trainModelFromUI() {
     console.log('Train button clicked');
     const neuronCounts = getNetworkStructure();
     const activation = getActivation();
-    const { learningRate, momentum, epochs } = getLearningParams();
+    const { learningRate, momentum, epochs, patience } = getLearningParams();
     // Prepare training data
     const points = getPointsData();
 
@@ -83,6 +84,12 @@ async function trainModelFromUI() {
             }
         };
         document.addEventListener('keydown', modal._escHandler);
+
+        // Remove any previous training status messages (e.g., Training Complete, warnings)
+        const modalBody = document.getElementById('training-modal-body');
+        if (modalBody) {
+            modalBody.querySelectorAll('.training-status-msg').forEach(el => el.remove());
+        }
     }
 
     if (!points.length) {
@@ -94,6 +101,18 @@ async function trainModelFromUI() {
         if (trainBtn) trainBtn.disabled = false;
         alert('No training points found. Please add points before training.');
         return;
+    }
+
+    // Remove existing prediction mesh while training runs
+    if (window.predictionMesh && window.scene) {
+        try {
+            window.scene.remove(window.predictionMesh);
+            if (window.predictionMesh.geometry) window.predictionMesh.geometry.dispose();
+            if (window.predictionMesh.material) window.predictionMesh.material.dispose();
+        } catch (e) {
+            console.warn('Error removing prediction mesh before training:', e);
+        }
+        window.predictionMesh = null;
     }
 
     const xs = points.map(pt => [pt.x, pt.z]);
@@ -198,6 +217,25 @@ async function trainModelFromUI() {
         });
 
         // === Train model ===
+        // === Early stopping with best-weight restore (patience = 10 epochs) ===
+    let bestLoss = Infinity;
+        let bestEpoch = -1;
+        let epochsNoImprovement = 0;
+        let bestWeights = null; // Array per layer of [kernel, bias] tensors (cloned)
+
+        function disposeBestWeights() {
+            if (bestWeights) {
+                try {
+                    for (const lw of bestWeights) {
+                        if (Array.isArray(lw)) {
+                            lw.forEach(t => t && typeof t.dispose === 'function' && t.dispose());
+                        }
+                    }
+                } catch (e) { console.warn('Error disposing bestWeights:', e); }
+                bestWeights = null;
+            }
+        }
+
         const callbacks = {
             onEpochEnd: async (epoch, logs) => {
                 const loss = logs && typeof logs.loss === 'number' ? logs.loss : NaN;
@@ -205,27 +243,78 @@ async function trainModelFromUI() {
                 if (typeof window.updateLossChart === 'function' && isFinite(loss)) {
                     try { window.updateLossChart(epoch + 1, loss); } catch (_) {}
                 }
+
+                // NaN/Inf guard
                 if (!isFinite(loss)) {
                     console.warn('NaN/Inf loss detected at epoch', epoch, '— stopping training.');
-                    // Stop training
                     model.stopTraining = true;
-                    // Inform user in modal if available
                     const modalBody = document.getElementById('training-modal-body');
                     if (modalBody) {
                         const warn = document.createElement('div');
+                        warn.className = 'training-status-msg';
                         warn.style.marginTop = '10px';
                         warn.style.color = '#c0392b';
                         warn.textContent = 'Training stopped: NaN/Infinity loss detected. Try reducing Learning Rate (e.g., x0.1), reducing Momentum, or using Glorot initialization.';
                         modalBody.appendChild(warn);
                     }
+                    return;
+                }
+
+                // Early stopping tracking with minimum improvement threshold
+                // Treat improvements smaller than minDelta as no-improvement to avoid tiny fluctuations extending training
+                const minDelta = 1e-4; // minimum required improvement in loss to reset patience
+                if ((bestLoss - loss) > minDelta) {
+                    bestLoss = loss;
+                    bestEpoch = epoch + 1;
+                    epochsNoImprovement = 0;
+                    // Snapshot current weights (clone) to restore later
+                    disposeBestWeights();
+                    bestWeights = model.layers.map(layer => {
+                        if (!layer.getWeights) return null;
+                        const ws = layer.getWeights();
+                        return ws.map(t => t.clone());
+                    });
+                } else {
+                    epochsNoImprovement += 1;
+                    const patienceVal = (typeof patience === 'number' && isFinite(patience) && patience > 0) ? patience : 50;
+                    if (epochsNoImprovement >= patienceVal) {
+                        console.log('Early stopping triggered. Best loss:', bestLoss, 'at epoch', bestEpoch);
+                        model.stopTraining = true;
+                        const modalBody = document.getElementById('training-modal-body');
+                        if (modalBody) {
+                            const info = document.createElement('div');
+                            info.className = 'training-status-msg';
+                            info.style.marginTop = '10px';
+                            // Use Bootstrap badges for clear visual status
+                            const stoppedEpoch = epoch + 1;
+                            info.innerHTML = `
+                                <span class="badge bg-warning text-dark">Stopped early at epoch ${stoppedEpoch}</span>
+                                <span class="badge bg-info text-dark ms-2">Restored best epoch ${bestEpoch}</span>
+                            `;
+                            modalBody.appendChild(info);
+                        }
+                    }
                 }
             }
         };
         await model.fit(tf.tensor2d(xs), tf.tensor2d(ys), { epochs, callbacks });
+        
+        // Restore best weights if we captured any snapshot
+        if (bestWeights) {
+            try {
+                for (let i = 0; i < model.layers.length; i++) {
+                    if (model.layers[i].setWeights && bestWeights[i]) {
+                        model.layers[i].setWeights(bestWeights[i]);
+                    }
+                }
+            } finally {
+                disposeBestWeights();
+            }
+        }
         // Training finished — avoid alerting the user to prevent interruption.
         console.log('Training complete.');
 
-        // === Save weights for drawNetwork ===
+        // === Save weights for drawNetwork (after potential restore) ===
         window.weights = [];
         window.biases = [];
         for (const layer of model.layers) {
@@ -245,11 +334,11 @@ async function trainModelFromUI() {
         if (modal) {
             const modalBody = document.getElementById('training-modal-body');
             if (modalBody) {
-                
                 // When training is complete, add a div below the existing content
                 const trainingCompleteDiv = document.createElement('div');
-                trainingCompleteDiv.textContent = 'Training Complete';
+                trainingCompleteDiv.className = 'training-status-msg';
                 trainingCompleteDiv.style.marginTop = '10px';
+                trainingCompleteDiv.innerHTML = '<span class="badge bg-success">Training Complete</span>';
                 document.getElementById('training-modal-body').appendChild(trainingCompleteDiv);
             }
         }

@@ -59,7 +59,7 @@
             </div>
             <div class="mb-2">
               <label for="momentum" class="form-label">Momentum</label>
-              <input type="number" id="momentum" class="form-control" step="0.01" value="0.9">
+              <input type="number" id="momentum" class="form-control" step="0.01" value="0">
             </div>
             <div class="mb-2">
               <label for="epochs" class="form-label">Epochs</label>
@@ -68,6 +68,10 @@
             <div class="mb-2">
               <label for="earlystopping" class="form-label">Early Stopping</label>
               <input type="number" id="earlystopping" class="form-control" value="0.01">
+            </div>
+            <div class="mb-2">
+              <label for="patience" class="form-label">Patience</label>
+              <input type="number" id="patience" class="form-control" value="50">
             </div>
             <button type="button" id="train-btn" class="btn btn-primary mt-2 w-100">Train</button>
             

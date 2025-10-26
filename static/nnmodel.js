@@ -476,6 +476,13 @@ document.getElementById('epochs').addEventListener('input', function() {
 document.getElementById('earlystopping').addEventListener('input', function() {
     window.earlyStopping = parseFloat(document.getElementById('earlystopping').value);
 });
+// Patience input tracking (optional global)
+const patienceEl = document.getElementById('patience');
+if (patienceEl) {
+    patienceEl.addEventListener('input', function() {
+        window.patience = parseInt(document.getElementById('patience').value);
+    });
+}
 document.getElementById('resetButton').addEventListener('click', () => {
     // Removed console.log
     // ...existing code...
@@ -487,9 +494,13 @@ document.getElementById('resetButton').addEventListener('click', () => {
     window.initmethod = 'glorot';
     window.neuronCounts = [2];
     window.learningRate = 0.01;
-    window.momentum = 0.9;
+    window.momentum = 0;
     window.epochs = 100;
     window.earlyStopping = 0.01;
+    window.patience = 50;
+    if (document.getElementById('patience')) {
+        document.getElementById('patience').value = 50;
+    }
     // Do NOT clear points; preserve user-added/generate points
     // Remove prediction mesh from the scene if present
     if (window.predictionMesh && window.scene) {
