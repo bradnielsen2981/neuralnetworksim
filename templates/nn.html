@@ -22,7 +22,14 @@
                   <option value="random">Random</option>
                 </select>
               </label>
-              <button id="resetButton" class="btn btn-primary btn-sm">Reset</button>
+              <button id="resetButton" class="btn btn-danger btn-sm" aria-label="Start Over" title="Start Over">
+                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                <span class="visually-hidden">Start Over</span>
+              </button>
+              <button id="reinitButton" class="btn btn-success btn-sm ms-2" aria-label="Reinitialise Network" title="Reinitialise Network">
+                <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+                <span class="visually-hidden">Reinitialise Network</span>
+              </button>
             </div>
           </div>
         </div>

@@ -99,6 +99,19 @@ async function trainModelFromUI() {
     const xs = points.map(pt => [pt.x, pt.z]);
     const ys = points.map(pt => [pt.y]);
 
+    // === Sanity checks: ensure inputs/labels are finite numbers ===
+    const isFiniteNumber = (n) => typeof n === 'number' && isFinite(n);
+    const badPoint = points.find(pt => !isFiniteNumber(pt.x) || !isFiniteNumber(pt.z) || !isFiniteNumber(pt.y));
+    if (badPoint) {
+        if (modal) {
+            modal.style.display = 'none';
+            if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
+            if (trainBtn) trainBtn.disabled = false;
+        }
+        alert('Training aborted: Found non-finite values in data. Please ensure all X, Z, and Y values are valid numbers.');
+        return;
+    }
+
     // Wrap heavy work in try/finally so we always cleanup the modal and button state
     let model = null;
     try {
@@ -169,13 +182,37 @@ async function trainModelFromUI() {
         }
 
         // === Compile model ===
+        // Use momentum optimizer if momentum > 0, otherwise plain SGD
+        const useMomentum = typeof momentum === 'number' && !isNaN(momentum) && momentum > 0;
+        const optimizer = useMomentum
+            ? tf.train.momentum(learningRate, momentum, false) // set true for Nesterov if desired
+            : tf.train.sgd(learningRate);
         model.compile({
             loss: 'meanSquaredError',
-            optimizer: tf.train.sgd(learningRate)
+            optimizer
         });
 
         // === Train model ===
-        await model.fit(tf.tensor2d(xs), tf.tensor2d(ys), { epochs });
+        const callbacks = {
+            onEpochEnd: async (epoch, logs) => {
+                const loss = logs && typeof logs.loss === 'number' ? logs.loss : NaN;
+                if (!isFinite(loss)) {
+                    console.warn('NaN/Inf loss detected at epoch', epoch, '— stopping training.');
+                    // Stop training
+                    model.stopTraining = true;
+                    // Inform user in modal if available
+                    const modalBody = document.getElementById('training-modal-body');
+                    if (modalBody) {
+                        const warn = document.createElement('div');
+                        warn.style.marginTop = '10px';
+                        warn.style.color = '#c0392b';
+                        warn.textContent = 'Training stopped: NaN/Infinity loss detected. Try reducing Learning Rate (e.g., x0.1), reducing Momentum, or using Glorot initialization.';
+                        modalBody.appendChild(warn);
+                    }
+                }
+            }
+        };
+        await model.fit(tf.tensor2d(xs), tf.tensor2d(ys), { epochs, callbacks });
         // Training finished — avoid alerting the user to prevent interruption.
         console.log('Training complete.');
 

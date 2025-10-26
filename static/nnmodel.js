@@ -500,6 +500,17 @@ document.getElementById('resetButton').addEventListener('click', () => {
     drawNetwork();
 });
 
+// Reinitialise Network button: reinitialise weights/biases using current settings
+const reinitBtnEl = document.getElementById('reinitButton');
+if (reinitBtnEl) {
+    reinitBtnEl.addEventListener('click', () => {
+        // Use current neuron counts and selected init method
+        const currentInit = window.initmethod !== undefined ? window.initmethod : document.getElementById('initialization').value;
+        initializeNetwork(window.neuronCounts, currentInit);
+        drawNetwork();
+    });
+}
+
 //-------- Initial Draw --------//
 
 
