@@ -490,8 +490,18 @@ document.getElementById('resetButton').addEventListener('click', () => {
     window.momentum = 0.9;
     window.epochs = 100;
     window.earlyStopping = 0.01;
-    window.points = [];
-    window.predictionMesh = null;
+    // Do NOT clear points; preserve user-added/generate points
+    // Remove prediction mesh from the scene if present
+    if (window.predictionMesh && window.scene) {
+        try {
+            window.scene.remove(window.predictionMesh);
+            if (window.predictionMesh.geometry) window.predictionMesh.geometry.dispose();
+            if (window.predictionMesh.material) window.predictionMesh.material.dispose();
+        } catch (e) {
+            console.warn('Error removing prediction mesh:', e);
+        }
+        window.predictionMesh = null;
+    }
     // window.scene and window.THREE are preserved
 
     const initType = window.initmethod !== undefined ? window.initmethod : document.getElementById('initialization').value;

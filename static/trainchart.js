@@ -38,37 +38,16 @@ const lossChart = new Chart(chartContext, {
     }
 });
 
-// Function to update the chart dynamically
+// Function to update the chart dynamically from real training
 function updateLossChart(epoch, loss) {
     lossChart.data.labels.push(epoch);
     lossChart.data.datasets[0].data.push(loss);
     lossChart.update();
 }
 
-// Update the lossChart to model the loss function during training
-async function trainAndUpdateLossChart() {
-    const epochs = window.epochs;
-    const learningRate = window.learningRate;
-    const momentum = window.momentum;
-    const earlyStopping = window.earlyStopping;
-
-    for (let epoch = 1; epoch <= epochs; epoch++) {
-        // Simulate training step and calculate loss (replace with actual training logic)
-        const loss = Math.exp(-epoch / 10) + Math.random() * 0.05; // Example loss function
-
-        // Update the chart dynamically
-        updateLossChart(epoch, loss);
-
-        // Simulate delay for visualization (remove in real training)
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Early stopping condition (example)
-        if (loss < earlyStopping) {
-            console.log(`Early stopping at epoch ${epoch}`);
-            break;
-        }
-    }
+// Function to reset/clear the loss chart when training starts
+function resetLossChart() {
+    lossChart.data.labels = [];
+    lossChart.data.datasets[0].data = [];
+    lossChart.update();
 }
-
-// Call the function to start training and updating the chart
-trainAndUpdateLossChart();

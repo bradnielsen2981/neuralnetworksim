@@ -99,6 +99,11 @@ async function trainModelFromUI() {
     const xs = points.map(pt => [pt.x, pt.z]);
     const ys = points.map(pt => [pt.y]);
 
+    // Reset the training graph when starting a new training run
+    if (typeof window.resetLossChart === 'function') {
+        try { window.resetLossChart(); } catch (_) {}
+    }
+
     // === Sanity checks: ensure inputs/labels are finite numbers ===
     const isFiniteNumber = (n) => typeof n === 'number' && isFinite(n);
     const badPoint = points.find(pt => !isFiniteNumber(pt.x) || !isFiniteNumber(pt.z) || !isFiniteNumber(pt.y));
@@ -196,6 +201,10 @@ async function trainModelFromUI() {
         const callbacks = {
             onEpochEnd: async (epoch, logs) => {
                 const loss = logs && typeof logs.loss === 'number' ? logs.loss : NaN;
+                // Update loss chart per epoch
+                if (typeof window.updateLossChart === 'function' && isFinite(loss)) {
+                    try { window.updateLossChart(epoch + 1, loss); } catch (_) {}
+                }
                 if (!isFinite(loss)) {
                     console.warn('NaN/Inf loss detected at epoch', epoch, '— stopping training.');
                     // Stop training
