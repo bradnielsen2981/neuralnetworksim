@@ -30,7 +30,7 @@
   <!-- ROW 1: Heading & paragraph -->
   <div class="row mb-3 top-row">
     <div class="col-md-8">
-      <h1 class="fw-bold">Neural Network Simulator</h1>
+  <h1 class="fw-bold site-title">Neural Network Simulator</h1>
       <p>
         A neural network uses gradient descent to curve-fit data by adjusting its weights and biases in order to minimize the loss function. This process is called Back propagation.
       </p>
@@ -41,7 +41,7 @@
     <div class="col-md-4 d-flex flex-column">
   <button id="mode-toggle" class="btn btn-sm btn-primary mt-2 w-100" style="display:none;">Switch Mode</button>
       <h4 class="points">Regression <i class="fa-solid fa-chart-line"></i></h4>
-      <p id="mode-description" class="mb-2" style="font-size:1rem; color:#000;">
+      <p id="mode-description" class="mb-2">
         The Regression model trains on the X and Z values below to predict future Y values. Once training is completed, a surface is created by making predictions for each X,Z point on the plane.
       </p>
     </div>
@@ -50,7 +50,7 @@
   <!-- ROW 2: 3D container & points table -->
   <div class="row mb-3 visualiser">
   <div class="col-12 col-md-8 mb-3 mb-md-0">
-      <div class="card border-0 rounded-0" style="height:500px;">
+  <div class="card border-0 rounded-0 three-card" style="height:487px; margin-bottom:0px;">
         <div class="card-header bg-lightgrey d-flex align-items-center justify-content-between">
           <div class="d-flex align-items-center gap-2">
             <button id="add-point-btn" class="btn btn-sm btn-success" title="Add Point Mode"><i class="fa-solid fa-plus"></i> Add Point Mode</button>
@@ -69,7 +69,7 @@
             <button id="clear-points-btn" class="btn btn-sm btn-danger" title="Clear Points"><i class="fa-solid fa-trash"></i></button>
           </div>
         </div>
-        <div id="three-container" style="height:100%; width:100%;"></div>
+        <div id="three-container" style="width:100%;"></div>
       </div>
     </div>
   <div class="col-12 col-md-4">
@@ -100,6 +100,13 @@
   <div class="row mb-3" id="training-section">
       <!-- Training Modal Popup (Flask include) -->
     {% include 'train.html' %}
+  </div>
+
+  <!-- ROW 4: Footer -->
+  <div class="row mb-4">
+    <div class="col-12">
+      {% include 'footer.html' %}
+    </div>
   </div>
 
 </div>

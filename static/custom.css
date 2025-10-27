@@ -1,21 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&display=swap');
+
 /* Custom card header: light grey with black text */
+/* Legacy helper class mapping to theme */
 .card-header.bg-lightgrey {
-  background-color: #f1f1f1 !important;
-  color: #222 !important;
+  background-color: var(--color-header-bg) !important;
+  color: var(--color-text) !important;
   font-weight: 600;
-  border-bottom: 1px solid #aaa !important;
-  border-top: 1px solid #aaa !important;
-  border-left: 1px solid #aaa !important;
-  border-right: 1px solid #aaa !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid #000 !important;
   border-radius: 0 !important;
 }
 /* General body/html styles */
 body, html {
   height: 100%;
   margin: 0;
+  padding:0px;
   font-family: sans-serif;
-  padding: 8px;
-  padding-top: 4px;
+  background-color: #abcbff;
+  color: var(--color-text);
+  /* Teen-friendly subtle dotted texture using theme-aligned colors */
+  background-image: none !important;
+}
+
+/* Link colors */
+a { color: var(--color-link); }
+a:hover, a:focus { color: var(--color-link-hover); }
+
+/* Unify card header and heading font across the app, and define theme colors */
+:root {
+  /* Typography */
+  --app-heading-font: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
+  /* Theme palette */
+  --color-bg: #f6f8fc;              /* App background */
+  --color-surface: #ffffff;         /* Card/background surfaces */
+  --color-surface-alt: #eef3fb;     /* Subtle alternate surface */
+  --color-header-bg: #d9e7ff;       /* Card header background */
+  --color-border: #c9d4e6;          /* Unified border color */
+  --color-text: #0f172a;            /* Primary text */
+  --color-muted: #55657e;           /* Muted text */
+
+  /* Brand/action colors */
+  --color-primary: #2b6cb0;
+  --color-primary-hover: #225e99;
+  --color-success: #2f855a;
+  --color-success-hover: #276749;
+  --color-danger: #c53030;
+  --color-danger-hover: #9b2c2c;
+  --color-link: #2b6cb0;
+  --color-link-hover: #1e4e86;
+}
+/* Apply to headers themselves, do NOT force on children to avoid overriding icon fonts */
+.card-header, .nnheading {
+  font-family: var(--app-heading-font);
 }
  
 /* App container layout */
@@ -26,8 +65,8 @@ body, html {
 
 /* Three.js container & canvas */
 #three-container {
-  height: 500px;
-  border: 1px solid #ddd;
+  height: 487px;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   margin-bottom: 15px;
 }
@@ -36,13 +75,28 @@ body, html {
   display: block;
 }
 
+/* Make the 3D viewer card use flex so the three-container fills leftover space under the header */
+.three-card {
+  display: flex;
+  flex-direction: column;
+}
+.three-card > .card-header {
+  flex: 0 0 auto;
+}
+.three-card > #three-container {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto; /* override fixed heights */
+  margin-bottom: 0; /* remove extra gap */
+}
+
 /* Sidebar / right column */
 #sidebar {
   flex: 1;
-  background: #f8f9fa;
+  background: var(--color-surface-alt);
   overflow-y: auto;
   padding: 1rem;
-  border-left: 1px solid #dee2e6;
+  border-left: 1px solid var(--color-border);
 }
 
 /* Points table container */
@@ -54,12 +108,24 @@ body, html {
 
 /* Remove rounded corners from all Bootstrap cards */
 .card {
-  border:#aaa solid 1px;
+  background: var(--color-surface);
+  border: 1px solid #000;
   border-radius: 0 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Ensure cards using Bootstrap's border-0 still show the required border */
+.card.border-0 {
+  border: 1px solid #000 !important;
 }
 
 .card-header {
   padding:10px;
+  font-size: 1rem;
+  font-weight: 600;
+  background-color: var(--color-header-bg);
+  color: var(--color-text);
+  border-bottom: 1px solid #000;
 }
 
 .card-body {
@@ -102,12 +168,13 @@ img.nn-diagram {
 }
 
 .container-fluid.py-4 {
-    margin-top: 0px;
-    padding-top: 8px !important;
+  margin-bottom: 0px !important;
+  margin-top: 0px;
+  padding-bottom: 0px !important;
+  padding-top: 8px !important;
 }
-
 .container-fluid.py-3 {
-    padding-top: 5px !important;
+  padding-top: 5px !important;
 }
 
 #nn-parameters .card-body {
@@ -169,8 +236,8 @@ img.nn-diagram {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  background: #f0f0f0;
-  border: 1px solid #ccc;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
   border-radius: 5px;
   padding: 2px 5px;
   font-size: 16px;
@@ -180,12 +247,24 @@ img.nn-diagram {
 .layer-control button {
   width: 20px;
   height: 20px;
-  border: 1px solid #aaa;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: #e0e0e0;
+  background: var(--color-bg);
   cursor: pointer;
   font-weight: bold;
   line-height: 16px;
+}
+
+/* Footer cards: no drop shadow, light grey border */
+.footer-card {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+  border: 1px solid #000 !important;
+}
+.footer-card .card-header.bg-lightgrey {
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid #000 !important;
 }
 .layer-control span {
   margin: 0 8px;
@@ -197,15 +276,15 @@ img.nn-diagram {
 #resetButton {
   padding: 5px 10px;
   cursor: pointer;
-  border: 1px solid #dc3545;
+  border: 1px solid var(--color-danger);
   border-radius: 5px;
-  background-color: #dc3545 !important; /* Bootstrap danger red */
+  background-color: var(--color-danger) !important; /* Themed danger */
   color: #fff !important;
   transition: background 0.2s;
 }
 #resetButton:hover {
-  background-color: #b02a37 !important; /* darker danger */
-  border-color: #b02a37;
+  background-color: var(--color-danger-hover) !important; /* darker danger */
+  border-color: var(--color-danger-hover);
 }
 
 
@@ -259,7 +338,97 @@ form#nn-parameters-form {
     font-size:0.9rem;
 }
 
-/* Match NN parameter help icons to the default Add Point button green (Bootstrap success) */
+/* Make parameter help icons forest green */
 .param-help {
-  color: var(--bs-success);
+  color: #228B22;
+}
+
+p.mt-2.small.text-muted {
+    margin-left: 10px;
+}
+
+.mb-3
+{
+    margin-bottom: 0px !important;
+}
+
+.container-fluid.py-4 {
+    margin-bottom: 0px !important;
+    margin-top: 10px;
+    padding-bottom: 0px !important;
+    padding-top: 8px !important;
+}
+
+.bg-light{
+  background-color: #abcbff !important;
+}
+
+/* Themed buttons to match the palette */
+.btn-primary {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+}
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--color-primary-hover) !important;
+  border-color: var(--color-primary-hover) !important;
+}
+.btn-success {
+  background-color: var(--color-success) !important;
+  border-color: var(--color-success) !important;
+}
+.btn-success:hover, .btn-success:focus {
+  background-color: var(--color-success-hover) !important;
+  border-color: var(--color-success-hover) !important;
+}
+.btn-danger {
+  background-color: var(--color-danger) !important;
+  border-color: var(--color-danger) !important;
+}
+.btn-danger:hover, .btn-danger:focus {
+  background-color: var(--color-danger-hover) !important;
+  border-color: var(--color-danger-hover) !important;
+}
+
+
+
+
+/* Reinitialise button: forest green */
+#reinitButton {
+  background-color: #228B22 !important; /* forest green */
+  border-color: #1e7a1e !important;
+  color: #fff !important;
+}
+#reinitButton:hover, #reinitButton:focus {
+  background-color: #1e7a1e !important;
+  border-color: #196619 !important;
+}
+
+/* Add Point Mode: forest green when off; bright green when on is handled inline in JS */
+#add-point-btn:not(.active) {
+  background-color: #228B22 !important;
+  border-color: #1e7a1e !important;
+  color: #fff !important;
+}
+
+.site-title {
+    
+    color: #ffffff;
+    font-weight: 800 !important;
+    -webkit-text-stroke: 1px #000000;
+    text-shadow: -1px 0 0 #000,
+     1px 0 0 #000,
+     0 -1px 0 #000,
+     0 1px 0 #000,
+     0 3px 6px rgba(0,0,0,0.35);
+}
+
+#train-btn {
+    background-color: #007fff !important;
+    border-color: #000000 !important;
+    color: #fff !important;
+}
+
+#train-btn:hover, #train-btn:focus {
+  background-color: #005eff !important; /* darker sky blue */
+  border-color: #000000 !important;
 }
