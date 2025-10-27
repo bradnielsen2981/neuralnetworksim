@@ -469,13 +469,16 @@ async function trainModelFromUI() {
             window.predictionMesh = null;
         }
 
-        if (window.scene && window.THREE) {
+        // Use THREE namespace from window, fallback to global if available
+        const THREE_NS = (typeof window !== 'undefined' && window.THREE) ? window.THREE : (typeof THREE !== 'undefined' ? THREE : null);
+
+        if (window.scene && THREE_NS) {
             console.log('Generating new prediction mesh with batching.');
             const step = 0.5; // finer grid for a smoother surface
             const xMin = -25, xMax = 25, zMin = -25, zMax = 25;
             const xCount = Math.floor((xMax - xMin) / step) + 1;
             const zCount = Math.floor((zMax - zMin) / step) + 1;
-            const geometry = new window.THREE.BufferGeometry();
+            const geometry = new THREE_NS.BufferGeometry();
 
             // Prepare batch input for predictions
             const batchInputs = [];
@@ -494,7 +497,7 @@ async function trainModelFromUI() {
 
             const vertCount = xCount * zCount;
             const positions = new Float32Array(vertCount * 3);
-            const colors = new Float32Array(vertCount * 3);
+            // const colors = new Float32Array(vertCount * 3); // no longer needed when using solid color material
 
             // Fill typed arrays
             for (let i = 0; i < vertCount; i++) {
@@ -505,14 +508,12 @@ async function trainModelFromUI() {
                 positions[idx3] = x;
                 positions[idx3 + 1] = y;
                 positions[idx3 + 2] = z;
-                // bright green
-                colors[idx3] = 0.0;
-                colors[idx3 + 1] = 1.0;
-                colors[idx3 + 2] = 0.0;
+                // kept for reference when vertex colors are desired
+                // colors[idx3] = 0.0; colors[idx3 + 1] = 1.0; colors[idx3 + 2] = 0.0;
             }
 
-            geometry.setAttribute('position', new window.THREE.Float32BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new window.THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('position', new THREE_NS.Float32BufferAttribute(positions, 3));
+            // geometry.setAttribute('color', new THREE_NS.Float32BufferAttribute(colors, 3));
 
             const indices = [];
             for (let xi = 0; xi < xCount - 1; xi++) {
@@ -528,17 +529,24 @@ async function trainModelFromUI() {
             geometry.setIndex(indices);
             // MeshBasicMaterial doesn't use normals; skip computing to save time
             // geometry.computeVertexNormals();
+            try { geometry.computeBoundingSphere(); } catch (_) {}
 
-            const material = new window.THREE.MeshBasicMaterial({
-                vertexColors: true,
-                side: window.THREE.DoubleSide,
+            // Start with a solid color so we can cycle colours easily; default from global selection
+            const material = new THREE_NS.MeshBasicMaterial({
+                color: (window.meshColors && window.meshColors[window.meshColorIndex]) ? window.meshColors[window.meshColorIndex] : 0x00ff00,
+                side: THREE_NS.DoubleSide,
                 transparent: true,
                 opacity: 0.6
             });
-            const mesh = new window.THREE.Mesh(geometry, material);
+            const mesh = new THREE_NS.Mesh(geometry, material);
             mesh.name = 'predictionMesh';
+            mesh.frustumCulled = false;
             window.scene.add(mesh);
             window.predictionMesh = mesh;
+            // Apply any pending style (shadows or updated colour)
+            if (typeof window.applyPredictionMeshStyle === 'function') {
+                try { window.applyPredictionMeshStyle(); } catch (_) {}
+            }
 
             console.log('Prediction mesh added to scene.');
 

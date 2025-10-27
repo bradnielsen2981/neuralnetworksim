@@ -51,7 +51,16 @@
   <div class="col-12 col-md-8 mb-3 mb-md-0">
       <div class="card border-0 rounded-0" style="height:500px;">
         <div class="card-header bg-lightgrey d-flex align-items-center justify-content-between">
-          <button id="add-point-btn" class="btn btn-sm btn-success" title="Add Point Mode"><i class="fa-solid fa-plus"></i> Add Point Mode</button>
+          <div class="d-flex align-items-center gap-2">
+            <button id="add-point-btn" class="btn btn-sm btn-success" title="Add Point Mode"><i class="fa-solid fa-plus"></i> Add Point Mode</button>
+            <!-- New icon buttons next to Add Point Mode -->
+            <button id="toggle-shadows-btn" class="btn btn-sm btn-outline-secondary" title="Toggle mesh shadows" aria-label="Toggle mesh shadows">
+              <i class="fa-solid fa-lightbulb"></i>
+            </button>
+            <button id="cycle-mesh-color-btn" class="btn btn-sm btn-outline-secondary" title="Cycle mesh colour" aria-label="Cycle mesh colour">
+              <i class="fa-solid fa-palette"></i>
+            </button>
+          </div>
           <div class="btn-group" role="group">
             <button id="generate-pyramid-btn" class="btn btn-sm btn-secondary" title="Add Pyramid"><i class="fa-solid fa-cube"></i> Pyramid</button>
             <button id="generate-ramp-btn" class="btn btn-sm btn-secondary" title="Add Ramp"><i class="fa-solid fa-stairs"></i> Ramp</button>

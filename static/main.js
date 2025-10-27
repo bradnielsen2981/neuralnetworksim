@@ -1,6 +1,76 @@
 // ========== GLOBAL Add Point Mode STATE ========== //
 let addPointMode = false;
 
+// Global UI state for mesh controls
+window.meshShadowsOn = false;
+window.meshColorIndex = 0;
+window.meshColors = [
+    0xffff00, // yellow
+    0x2980b9, // blue
+    0xe74c3c, // red
+    0x8e44ad, // purple
+    0xe67e22, // orange
+    0x27ae60  // green
+];
+
+// Helper to apply color and shadow changes to current or future prediction mesh
+window.applyPredictionMeshStyle = function applyPredictionMeshStyle() {
+    const mesh = window.predictionMesh;
+    if (mesh) {
+        const geom = mesh.geometry;
+        const currentMat = mesh.material;
+        const opacity = (currentMat && typeof currentMat.opacity === 'number') ? currentMat.opacity : 0.6;
+        const colorHex = window.meshColors[window.meshColorIndex];
+
+        // If enabling shadows, ensure normals exist for lit materials
+        if (window.meshShadowsOn && geom && !geom.attributes.normal) {
+            try { geom.computeVertexNormals(); } catch (_) {}
+        }
+
+        // Determine desired material type based on shadow state
+        const wantLit = !!window.meshShadowsOn; // use MeshStandardMaterial when true
+        const isCurrentlyLit = currentMat && (currentMat.isMeshStandardMaterial === true);
+
+        if (wantLit !== isCurrentlyLit || (currentMat && currentMat.vertexColors)) {
+            // Replace material
+            if (currentMat && typeof currentMat.dispose === 'function') currentMat.dispose();
+            mesh.material = wantLit
+                ? new THREE.MeshStandardMaterial({ color: colorHex, metalness: 0.1, roughness: 0.8, side: THREE.DoubleSide, transparent: true, opacity })
+                : new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide, transparent: true, opacity });
+        } else if (mesh.material) {
+            // Just update colour
+            mesh.material.color = new THREE.Color(colorHex);
+            mesh.material.needsUpdate = true;
+        }
+
+        // Shadows on the mesh
+        mesh.castShadow = !!window.meshShadowsOn;
+        mesh.receiveShadow = !!window.meshShadowsOn;
+    }
+
+    // Renderer + light
+    if (window.renderer) {
+        window.renderer.shadowMap.enabled = !!window.meshShadowsOn;
+        if (window.THREE && window.THREE.PCFSoftShadowMap) {
+            window.renderer.shadowMap.type = window.THREE.PCFSoftShadowMap;
+        }
+    }
+    if (window.directionalLight) {
+        window.directionalLight.castShadow = !!window.meshShadowsOn;
+    }
+
+    // Ensure other placed point spheres cast shadows when enabled
+    if (window.scene) {
+        window.scene.traverse(obj => {
+            if (obj && obj.isMesh) {
+                if (window.hoverSphere && obj === window.hoverSphere) return;
+                if (window.predictionMesh && obj === window.predictionMesh) return;
+                obj.castShadow = !!window.meshShadowsOn;
+                // points need not receive
+            }
+        });
+    }
+};
 
 // ========== HEADER BUTTON EVENT HANDLERS ========== //
 window.addEventListener('DOMContentLoaded', () => {
@@ -32,6 +102,28 @@ window.addEventListener('DOMContentLoaded', () => {
     // Set initial state (off)
     setAddPointMode(false);
     addPointBtn.addEventListener('click', () => setAddPointMode(!addPointMode));
+
+    // New: Shadow toggle button
+    const toggleShadowsBtn = document.getElementById('toggle-shadows-btn');
+    if (toggleShadowsBtn) {
+        toggleShadowsBtn.addEventListener('click', () => {
+            window.meshShadowsOn = !window.meshShadowsOn;
+            // Update icon style to indicate state
+            toggleShadowsBtn.classList.toggle('btn-outline-secondary', !window.meshShadowsOn);
+            toggleShadowsBtn.classList.toggle('btn-secondary', window.meshShadowsOn);
+            window.applyPredictionMeshStyle();
+        });
+    }
+
+    // New: Mesh colour cycle button
+    const cycleMeshColorBtn = document.getElementById('cycle-mesh-color-btn');
+    if (cycleMeshColorBtn) {
+        cycleMeshColorBtn.addEventListener('click', () => {
+            window.meshColorIndex = (window.meshColorIndex + 1) % window.meshColors.length;
+            window.applyPredictionMeshStyle();
+        });
+    }
+
     // Right-click disables add point mode
     document.getElementById('three-container').addEventListener('contextmenu', (e) => {
         if (addPointMode) {
@@ -72,6 +164,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 import * as THREE from 'three';
 import { OrbitControls } from 'orbitcontrols';
+// Expose THREE globally for non-module scripts
+window.THREE = window.THREE || THREE;
 
 // ================= INITIALIZATION =================
 // Get the container for the Three.js scene
@@ -83,6 +177,9 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 container.appendChild(renderer.domElement);
+// Expose globally for styling helpers
+window.scene = scene;
+window.renderer = renderer;
 
 // Set up the camera
 const fov = 50;
@@ -91,6 +188,7 @@ const near = 0.1;
 const far = 100;
 const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 camera.position.set(20, 5, 20);
+window.camera = camera;
 
 // Add OrbitControls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -98,12 +196,18 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 controls.target.set(0, 0, 0);
 controls.update();
+window.controls = controls;
 
 // Lighting
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 10, 7);
 scene.add(directionalLight);
+window.directionalLight = directionalLight;
+
+// Enable shadow map if toggled on at startup
+renderer.shadowMap.enabled = !!window.meshShadowsOn;
+directionalLight.castShadow = !!window.meshShadowsOn;
 
 // Grid
 const gridSize = 50;
@@ -122,6 +226,7 @@ const hoverMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const hoverSphere = new THREE.Mesh(hoverGeometry, hoverMaterial);
 hoverSphere.visible = false;
 scene.add(hoverSphere);
+window.hoverSphere = hoverSphere;
 
 // Placement state for sphere placement/adjustment
 let activeSphere = null;        // sphere currently being adjusted (or null)
@@ -577,6 +682,15 @@ renderer.domElement.addEventListener('click', onClick);
 resizeCanvas();
 animate();
 
-window.scene = scene;
-window.THREE = THREE;
+// After prediction mesh is created elsewhere, ensure our chosen style applies
+// Observe and style when window.predictionMesh is set
+(function observePredictionMesh() {
+    const check = () => {
+        if (window.predictionMesh) {
+            window.applyPredictionMeshStyle();
+        }
+        requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+})();
 
