@@ -32,7 +32,17 @@ function getLearningParams() {
 }
 
 async function trainModelFromUI() {
-    // Show the training modal when training starts (after we validate there are points)
+    // Remove prediction mesh immediately on Train click
+    if (window.predictionMesh && window.scene) {
+        try {
+            window.scene.remove(window.predictionMesh);
+            if (window.predictionMesh.geometry) window.predictionMesh.geometry.dispose();
+            if (window.predictionMesh.material) window.predictionMesh.material.dispose();
+        } catch (e) {
+            console.warn('Error removing prediction mesh at Train click:', e);
+        }
+        window.predictionMesh = null;
+    }
     console.log('Train button clicked');
     const neuronCounts = getNetworkStructure();
     const activation = getActivation();
@@ -90,6 +100,8 @@ async function trainModelFromUI() {
         if (modalBody) {
             modalBody.querySelectorAll('.training-status-msg').forEach(el => el.remove());
         }
+        // Let the browser paint the modal before heavy work
+        await new Promise(requestAnimationFrame);
     }
 
     if (!points.length) {
@@ -130,8 +142,8 @@ async function trainModelFromUI() {
         if (modal) {
             modal.style.display = 'none';
             if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
-            if (trainBtn) trainBtn.disabled = false;
         }
+        if (trainBtn) trainBtn.disabled = false;
         alert('Training aborted: Found non-finite values in data. Please ensure all X, Z, and Y values are valid numbers.');
         return;
     }
@@ -205,20 +217,16 @@ async function trainModelFromUI() {
             }
         }
 
-        // === Compile model ===
+        // === Compile model (create optimizer) ===
         // Use momentum optimizer if momentum > 0, otherwise plain SGD
         const useMomentum = typeof momentum === 'number' && !isNaN(momentum) && momentum > 0;
         const optimizer = useMomentum
             ? tf.train.momentum(learningRate, momentum, false) // set true for Nesterov if desired
             : tf.train.sgd(learningRate);
-        model.compile({
-            loss: 'meanSquaredError',
-            optimizer
-        });
 
-        // === Train model ===
-        // === Early stopping with best-weight restore (patience = 10 epochs) ===
-    let bestLoss = Infinity;
+        // === Train model (manual loop with gradient clipping) ===
+        // Early stopping with best-weight restore
+        let bestLoss = Infinity;
         let bestEpoch = -1;
         let epochsNoImprovement = 0;
         let bestWeights = null; // Array per layer of [kernel, bias] tensors (cloned)
@@ -236,69 +244,112 @@ async function trainModelFromUI() {
             }
         }
 
-        const callbacks = {
-            onEpochEnd: async (epoch, logs) => {
-                const loss = logs && typeof logs.loss === 'number' ? logs.loss : NaN;
-                // Update loss chart per epoch
-                if (typeof window.updateLossChart === 'function' && isFinite(loss)) {
-                    try { window.updateLossChart(epoch + 1, loss); } catch (_) {}
-                }
+        const xsTensor = tf.tensor2d(xs);
+        const ysTensor = tf.tensor2d(ys);
+        const clipValue = 1.0; // clip-by-value threshold (tune to 0.5–5.0 as needed)
+        const minDelta = 1e-4; // minimum improvement to reset patience
+        let stoppedEarly = false;
+        let lastFiniteLoss = null; // track last finite loss
+        let stopReason = null; // 'nan-inf' | 'early' | null
 
-                // NaN/Inf guard
-                if (!isFinite(loss)) {
-                    console.warn('NaN/Inf loss detected at epoch', epoch, '— stopping training.');
-                    model.stopTraining = true;
+        for (let epoch = 0; epoch < epochs; epoch++) {
+            // Compute loss and gradients w.r.t. model variables
+            const vg = tf.variableGrads(() => {
+                const preds = model.predict(xsTensor);
+                const lossTensor = tf.losses.meanSquaredError(ysTensor, preds).mean();
+                return lossTensor;
+            });
+
+            const loss = vg.value.dataSync()[0];
+
+            // Update loss chart
+            if (typeof window.updateLossChart === 'function' && isFinite(loss)) {
+                try { window.updateLossChart(epoch + 1, loss); } catch (_) {}
+            }
+            // Track last finite loss
+            if (isFinite(loss)) lastFiniteLoss = loss;
+
+            // NaN/Inf guard
+            if (!isFinite(loss)) {
+                console.warn('NaN/Inf loss detected at epoch', epoch, '— stopping training.');
+                const modalBody = document.getElementById('training-modal-body');
+                if (modalBody) {
+                    const warn = document.createElement('div');
+                    warn.className = 'training-status-msg';
+                    warn.style.marginTop = '10px';
+                    warn.style.color = '#c0392b';
+                    warn.innerHTML = `You have an exploding gradient, try reducing the learning rate and inserting more layers of neurons.` +
+                        (lastFiniteLoss != null ? ` <span class="badge bg-secondary ms-2">Last finite loss: ${lastFiniteLoss.toFixed(6)}</span>` : '');
+                    modalBody.appendChild(warn);
+                }
+                stopReason = 'nan-inf';
+                // Dispose grads and tensors then break
+                vg.value.dispose();
+                Object.values(vg.grads).forEach(t => t.dispose());
+                break;
+            }
+
+            // Early stopping tracking
+            if ((bestLoss - loss) > minDelta) {
+                bestLoss = loss;
+                bestEpoch = epoch + 1;
+                epochsNoImprovement = 0;
+                // Snapshot current weights (clone) to restore later
+                disposeBestWeights();
+                bestWeights = model.layers.map(layer => {
+                    if (!layer.getWeights) return null;
+                    const ws = layer.getWeights();
+                    return ws.map(t => t.clone());
+                });
+            } else {
+                epochsNoImprovement += 1;
+                const patienceVal = (typeof patience === 'number' && isFinite(patience) && patience > 0) ? patience : 50;
+                if (epochsNoImprovement >= patienceVal) {
+                    stoppedEarly = true;
+                    stopReason = 'early';
                     const modalBody = document.getElementById('training-modal-body');
                     if (modalBody) {
-                        const warn = document.createElement('div');
-                        warn.className = 'training-status-msg';
-                        warn.style.marginTop = '10px';
-                        warn.style.color = '#c0392b';
-                        warn.textContent = 'Training stopped: NaN/Infinity loss detected. Try reducing Learning Rate (e.g., x0.1), reducing Momentum, or using Glorot initialization.';
-                        modalBody.appendChild(warn);
+                        const info = document.createElement('div');
+                        info.className = 'training-status-msg';
+                        info.style.marginTop = '10px';
+                        const stoppedEpoch = epoch + 1;
+                        info.innerHTML = `
+                            <span class="badge bg-warning text-dark">Stopped early at epoch ${stoppedEpoch}</span>
+                            <span class="badge bg-info text-dark ms-2">Restored best epoch ${bestEpoch}</span>
+                            <span class="badge bg-secondary ms-2">Final loss: ${lastFiniteLoss != null ? lastFiniteLoss.toFixed(6) : 'n/a'}</span>
+                            <span class="badge bg-secondary ms-2">Best loss: ${isFinite(bestLoss) ? bestLoss.toFixed(6) : 'n/a'}</span>
+                        `;
+                        modalBody.appendChild(info);
                     }
-                    return;
-                }
-
-                // Early stopping tracking with minimum improvement threshold
-                // Treat improvements smaller than minDelta as no-improvement to avoid tiny fluctuations extending training
-                const minDelta = 1e-4; // minimum required improvement in loss to reset patience
-                if ((bestLoss - loss) > minDelta) {
-                    bestLoss = loss;
-                    bestEpoch = epoch + 1;
-                    epochsNoImprovement = 0;
-                    // Snapshot current weights (clone) to restore later
-                    disposeBestWeights();
-                    bestWeights = model.layers.map(layer => {
-                        if (!layer.getWeights) return null;
-                        const ws = layer.getWeights();
-                        return ws.map(t => t.clone());
-                    });
-                } else {
-                    epochsNoImprovement += 1;
-                    const patienceVal = (typeof patience === 'number' && isFinite(patience) && patience > 0) ? patience : 50;
-                    if (epochsNoImprovement >= patienceVal) {
-                        console.log('Early stopping triggered. Best loss:', bestLoss, 'at epoch', bestEpoch);
-                        model.stopTraining = true;
-                        const modalBody = document.getElementById('training-modal-body');
-                        if (modalBody) {
-                            const info = document.createElement('div');
-                            info.className = 'training-status-msg';
-                            info.style.marginTop = '10px';
-                            // Use Bootstrap badges for clear visual status
-                            const stoppedEpoch = epoch + 1;
-                            info.innerHTML = `
-                                <span class="badge bg-warning text-dark">Stopped early at epoch ${stoppedEpoch}</span>
-                                <span class="badge bg-info text-dark ms-2">Restored best epoch ${bestEpoch}</span>
-                            `;
-                            modalBody.appendChild(info);
-                        }
-                    }
+                    // Dispose current grads and break loop
+                    vg.value.dispose();
+                    Object.values(vg.grads).forEach(t => t.dispose());
+                    break;
                 }
             }
-        };
-        await model.fit(tf.tensor2d(xs), tf.tensor2d(ys), { epochs, callbacks });
-        
+
+            // Clip gradients and apply update
+            const clipped = {};
+            for (const name in vg.grads) {
+                // Clip-by-value (simpler and robust)
+                clipped[name] = tf.clipByValue(vg.grads[name], -clipValue, clipValue);
+            }
+            optimizer.applyGradients(clipped);
+
+            // Cleanup tensors for this step
+            vg.value.dispose();
+            Object.values(vg.grads).forEach(t => t.dispose());
+            Object.values(clipped).forEach(t => t.dispose());
+
+            // Periodically yield to keep UI responsive
+            if (epoch % 10 === 0) {
+                await tf.nextFrame();
+            }
+        }
+
+        xsTensor.dispose();
+        ysTensor.dispose();
+
         // Restore best weights if we captured any snapshot
         if (bestWeights) {
             try {
@@ -330,8 +381,8 @@ async function trainModelFromUI() {
             }
         }
 
-        // === Update modal content to "Training complete" ===
-        if (modal) {
+        // === Update modal content to "Training complete" (only on normal completion) ===
+        if (modal && !stoppedEarly && stopReason === null) {
             const modalBody = document.getElementById('training-modal-body');
             if (modalBody) {
                 // When training is complete, add a div below the existing content
@@ -340,6 +391,13 @@ async function trainModelFromUI() {
                 trainingCompleteDiv.style.marginTop = '10px';
                 trainingCompleteDiv.innerHTML = '<span class="badge bg-success">Training Complete</span>';
                 document.getElementById('training-modal-body').appendChild(trainingCompleteDiv);
+
+                // Also show final loss
+                const finalLossDiv = document.createElement('div');
+                finalLossDiv.className = 'training-status-msg';
+                finalLossDiv.style.marginTop = '6px';
+                finalLossDiv.innerHTML = `<span class="badge bg-secondary">Final loss: ${typeof lastFiniteLoss === 'number' ? lastFiniteLoss.toFixed(6) : 'n/a'}</span>`;
+                modalBody.appendChild(finalLossDiv);
             }
         }
 
@@ -438,68 +496,8 @@ async function trainModelFromUI() {
         window.redrawNetwork();
     }
 
-    // === Generate prediction mesh for Three.js ===
-    if (window.predictionMesh && window.scene) {
-        window.scene.remove(window.predictionMesh);
-        window.predictionMesh.geometry.dispose();
-        window.predictionMesh.material.dispose();
-        window.predictionMesh = null;
-    }
-
-    if (window.scene && window.THREE) {
-        const step = 1;
-        const xMin = -25, xMax = 25, zMin = -25, zMax = 25;
-        const xCount = Math.floor((xMax - xMin) / step) + 1;
-        const zCount = Math.floor((zMax - zMin) / step) + 1;
-        const geometry = new window.THREE.BufferGeometry();
-        const vertices = [];
-        const colors = [];
-
-        for (let xi = 0; xi < xCount; xi++) {
-            for (let zi = 0; zi < zCount; zi++) {
-                const x = xMin + xi * step;
-                const z = zMin + zi * step;
-                // Only use points strictly within -26 < x < 26 and -26 < z < 26
-                if (x > -26 && x < 26 && z > -26 && z < 26) {
-                    const y = (await model.predict(window.tf.tensor2d([[x, z]])).array())[0][0];
-                    vertices.push(x, y, z);
-                    colors.push(0.1, 0.4, 0.1);
-                }
-            }
-        }
-
-        geometry.setAttribute('position', new window.THREE.Float32BufferAttribute(vertices, 3));
-        geometry.setAttribute('color', new window.THREE.Float32BufferAttribute(colors, 3));
-
-        const indices = [];
-        for (let xi = 0; xi < xCount - 1; xi++) {
-            for (let zi = 0; zi < zCount - 1; zi++) {
-                const a = xi * zCount + zi;
-                const b = (xi + 1) * zCount + zi;
-                const c = (xi + 1) * zCount + (zi + 1);
-                const d = xi * zCount + (zi + 1);
-                indices.push(a, b, d);
-                indices.push(b, c, d);
-            }
-        }
-        geometry.setIndex(indices);
-        geometry.computeVertexNormals();
-
-        const material = new window.THREE.MeshStandardMaterial({
-            vertexColors: true,
-            side: window.THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.7
-        });
-        const mesh = new window.THREE.Mesh(geometry, material);
-        mesh.name = 'predictionMesh';
-        window.scene.add(mesh);
-        window.predictionMesh = mesh;
-    }
+    // Removed duplicate prediction mesh generation block that re-rendered the mesh a second time.
 }
-
-
-
 
 // Attach event listener to train button
 document.getElementById('train-btn').addEventListener('click', trainModelFromUI);
