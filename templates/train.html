@@ -7,9 +7,10 @@
 				<button type="button" class="btn-close" id="close-training-modal" aria-label="Close"></button>
 			</div>
 			<div class="modal-body" id="training-modal-body">
-				<p>Training in progress...<br>
-				You can add more details here, such as a progress bar, logs, or results.</p>
-				
+				<p>Training in progress...</p>
+                <div id="training-time" class="text-muted" style="font-size:0.9rem;">
+                    Time elapsed: <span id="training-elapsed">00:00.0</span>
+                </div>
 				<!-- Add a canvas element for the Chart.js demo -->
 				<canvas id="lossChart" width="400" height="200"></canvas>
 			</div>

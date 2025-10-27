@@ -1,5 +1,3 @@
-
-
 // ========== GLOBAL Add Point Mode STATE ========== //
 let addPointMode = false;
 
@@ -290,7 +288,7 @@ function renderPointsTable() {
 function updateModeUI() {
     // Removed alert
     if (regressionMode) {
-        pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression Points '
+        pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression';
         pointsTableHead.innerHTML = `
             <tr>
                 <th scope="col">X</th>

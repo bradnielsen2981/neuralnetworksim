@@ -22,14 +22,16 @@
                   <option value="random">Random</option>
                 </select>
               </label>
-              <button id="resetButton" class="btn btn-danger btn-sm" aria-label="Start Over" title="Start Over">
-                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
-                <span class="visually-hidden">Start Over</span>
-              </button>
-              <button id="reinitButton" class="btn btn-success btn-sm ms-2" aria-label="Reinitialise Network" title="Reinitialise Network">
-                <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
-                <span class="visually-hidden">Reinitialise Network</span>
-              </button>
+              <div class="btn-group" role="group">
+                <button id="reinitButton" class="btn btn-success btn-sm" aria-label="Reinitialise Network" title="Reinitialise Network">
+                  <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+                  <span class="visually-hidden">Reinitialise Network</span>
+                </button>
+                <button id="resetButton" class="btn btn-danger btn-sm" aria-label="Start Over" title="Start Over" style="margin-left:5px;">
+                  <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+                  <span class="visually-hidden">Start Over</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -50,27 +52,42 @@
         <div class="card-body">
           <form id="nn-parameters-form" class="mt-2">
             <div class="mb-2">
-              <label for="lossfunction" class="form-label">Loss Function</label>
+              <label for="lossfunction" class="form-label">Loss Function
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Measures fit. Mean Squared Error (MSE) is the mean of the squared distance between the predicted point and the actual point; lower is better."></i>
+              </label>
               <input type="text" id="lossfunction" class="form-control" value="Mean Squared Error" readonly>
             </div>
             <div class="mb-2">
-              <label for="learning-rate" class="form-label">Learning Rate</label>
+              <label for="learning-rate" class="form-label">Learning Rate
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Fraction of the gradient used for each update; too high can diverge or skip the minimum, too low trains slowly."></i>
+              </label>
               <input type="number" id="learning-rate" class="form-control" step="0.001" value="0.01">
             </div>
             <div class="mb-2">
-              <label for="momentum" class="form-label">Momentum</label>
-              <input type="number" id="momentum" class="form-control" step="0.01" value="0">
+              <label for="momentum" class="form-label">Momentum
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Adds a fraction of the previous update to smooth and speed learning."></i>
+              </label>
+              <div class="d-flex align-items-center">
+                <input type="range" id="momentum" class="form-range" min="0" max="1" step="0.1" value="0.0">
+                <span id="momentum-display" class="ms-2 small text-muted" style="min-width:3ch; text-align:right;">0.0</span>
+              </div>
             </div>
             <div class="mb-2">
-              <label for="epochs" class="form-label">Epochs</label>
-              <input type="number" id="epochs" class="form-control" value="100">
+              <label for="epochs" class="form-label">Epochs
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="The number of passes through all the data whilst applying gradient descent to the model."></i>
+              </label>
+              <input type="number" id="epochs" class="form-control" value="500">
             </div>
             <div class="mb-2">
-              <label for="earlystopping" class="form-label">Early Stopping</label>
+              <label for="earlystopping" class="form-label">Early Stopping
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Stop when improvement becomes too small; this sets the minimum improvement counted as progress."></i>
+              </label>
               <input type="number" id="earlystopping" class="form-control" value="0.01">
             </div>
             <div class="mb-2">
-              <label for="patience" class="form-label">Patience</label>
+              <label for="patience" class="form-label">Patience
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="How many epochs with no (or tiny) improvement are allowed before stopping early."></i>
+              </label>
               <input type="number" id="patience" class="form-control" value="50">
             </div>
             <button type="button" id="train-btn" class="btn btn-primary mt-2 w-100">Train</button>
@@ -81,4 +98,16 @@
     </div>
   </div>
 </div>
+<script>
+  // Initialize and live-update the momentum display from the slider
+  document.addEventListener('DOMContentLoaded', function () {
+    const slider = document.getElementById('momentum');
+    const display = document.getElementById('momentum-display');
+    if (slider && display) {
+      const fmt = v => Number(v).toFixed(1);
+      display.textContent = fmt(slider.value);
+      slider.addEventListener('input', () => display.textContent = fmt(slider.value));
+    }
+  });
+</script>
 

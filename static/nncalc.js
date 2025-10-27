@@ -22,12 +22,20 @@ function getPointsData() {
 
 // Helper to get learning parameters from form
 function getLearningParams() {
+    const lr = parseFloat(document.getElementById('learning-rate').value);
+    let mom = parseFloat(document.getElementById('momentum').value);
+    if (!isFinite(mom)) mom = 0;
+    // Clamp momentum to [0, 1]
+    mom = Math.max(0, Math.min(1, mom));
+    const ep = parseInt(document.getElementById('epochs').value);
+    const es = parseFloat(document.getElementById('earlystopping').value);
+    const pat = parseInt((document.getElementById('patience') && document.getElementById('patience').value) || 50);
     return {
-        learningRate: parseFloat(document.getElementById('learning-rate').value),
-        momentum: parseFloat(document.getElementById('momentum').value),
-        epochs: parseInt(document.getElementById('epochs').value),
-        earlyStopping: parseFloat(document.getElementById('earlystopping').value),
-        patience: parseInt((document.getElementById('patience') && document.getElementById('patience').value) || 50)
+        learningRate: lr,
+        momentum: mom,
+        epochs: ep,
+        earlyStopping: es,
+        patience: pat
     };
 }
 
@@ -54,6 +62,49 @@ async function trainModelFromUI() {
     const modal = document.getElementById('training-modal');
     const closeBtn = document.getElementById('close-training-modal');
     const trainBtn = document.getElementById('train-btn');
+    let trainingTimerStart = null;
+    let trainingTimerId = null;
+    function startTrainingTimer() {
+        const elapsedEl = document.getElementById('training-elapsed');
+        if (!elapsedEl) return;
+        trainingTimerStart = performance.now();
+        const format = (ms) => {
+            const totalMs = Math.max(0, ms);
+            const totalSec = totalMs / 1000;
+            const min = Math.floor(totalSec / 60);
+            const sec = Math.floor(totalSec % 60);
+            const deci = Math.floor((totalSec - Math.floor(totalSec)) * 10);
+            const mm = String(min).padStart(2, '0');
+            const ss = String(sec).padStart(2, '0');
+            return `${mm}:${ss}.${deci}`;
+        };
+        // ensure reset to 00:00.0 before start
+        elapsedEl.textContent = '00:00.0';
+        trainingTimerId = setInterval(() => {
+            const now = performance.now();
+            const delta = now - trainingTimerStart;
+            const el = document.getElementById('training-elapsed');
+            if (el) {
+                // reuse same formatter
+                const totalMs = Math.max(0, delta);
+                const totalSec = totalMs / 1000;
+                const min = Math.floor(totalSec / 60);
+                const sec = Math.floor(totalSec % 60);
+                const deci = Math.floor((totalSec - Math.floor(totalSec)) * 10);
+                const mm = String(min).padStart(2, '0');
+                const ss = String(sec).padStart(2, '0');
+                el.textContent = `${mm}:${ss}.${deci}`;
+            }
+        }, 100);
+        if (modal) modal._trainingTimer = trainingTimerId;
+    }
+    function stopTrainingTimer() {
+        if (trainingTimerId) {
+            clearInterval(trainingTimerId);
+            trainingTimerId = null;
+            if (modal) modal._trainingTimer = null;
+        }
+    }
     if (modal) {
         // Show
         modal.style.display = 'block';
@@ -73,6 +124,8 @@ async function trainModelFromUI() {
                 modal.style.display = 'none';
                 if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
                 if (trainBtn) trainBtn.disabled = false;
+                // stop timer on manual close
+                stopTrainingTimer();
             };
         }
 
@@ -82,6 +135,8 @@ async function trainModelFromUI() {
                 modal.style.display = 'none';
                 if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
                 if (trainBtn) trainBtn.disabled = false;
+                // stop timer on manual close
+                stopTrainingTimer();
             }
         };
 
@@ -91,6 +146,8 @@ async function trainModelFromUI() {
                 modal.style.display = 'none';
                 if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
                 if (trainBtn) trainBtn.disabled = false;
+                // stop timer on manual close
+                stopTrainingTimer();
             }
         };
         document.addEventListener('keydown', modal._escHandler);
@@ -102,6 +159,8 @@ async function trainModelFromUI() {
         }
         // Let the browser paint the modal before heavy work
         await new Promise(requestAnimationFrame);
+        // Start the live timer once modal is painted
+        startTrainingTimer();
     }
 
     if (!points.length) {
@@ -467,8 +526,8 @@ async function trainModelFromUI() {
             const material = new window.THREE.MeshStandardMaterial({
                 vertexColors: true,
                 side: window.THREE.DoubleSide,
-                transparent: false, // Disable transparency for better visibility
-                opacity: 1.0 // Fully opaque
+                transparent: true,
+                opacity: 0.8
             });
             const mesh = new window.THREE.Mesh(geometry, material);
             mesh.name = 'predictionMesh';
@@ -489,6 +548,8 @@ async function trainModelFromUI() {
     } finally {
         // Ensure button is re-enabled, but do not hide the modal
         if (trainBtn) trainBtn.disabled = false;
+        // Stop the timer when training ends
+        stopTrainingTimer();
     }
 
     // === Redraw network ===

@@ -197,15 +197,15 @@ img.nn-diagram {
 #resetButton {
   padding: 5px 10px;
   cursor: pointer;
-  border: 1px solid #007bff;
+  border: 1px solid #dc3545;
   border-radius: 5px;
-  background-color: #007bff !important;
+  background-color: #dc3545 !important; /* Bootstrap danger red */
   color: #fff !important;
   transition: background 0.2s;
 }
 #resetButton:hover {
-  background-color: #0056b3 !important;
-  border-color: #0056b3;
+  background-color: #b02a37 !important; /* darker danger */
+  border-color: #b02a37;
 }
 
 

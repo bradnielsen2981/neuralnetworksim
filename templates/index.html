@@ -39,7 +39,10 @@
     </div>
     <div class="col-md-4 d-flex flex-column">
   <button id="mode-toggle" class="btn btn-sm btn-primary mt-2 w-100" style="display:none;">Switch Mode</button>
-      <h4 class="points"><i class="fa-solid fa-table"></i> Regression Points</h4>
+      <h4 class="points"><i class="fa-solid fa-table"></i> Regression</h4>
+      <p id="mode-description" class="mb-2" style="font-size:1rem; color:#000;">
+        The Regression model trains on the X and Z values below to predict future Y values. Once training is completed, a surface is created by making predictions for each X,Z point on the plane.
+      </p>
     </div>
   </div>
 
@@ -99,6 +102,30 @@
 <script src="static/nnmodel.js"></script>
 <script type="module" src="static/nncalc.js"></script>
 <script src="static/trainchart.js"></script>
+
+<script>
+  // Match the NN parameter help icons' color to the Add Point Mode button
+  document.addEventListener('DOMContentLoaded', function () {
+    function syncHelpIconColor() {
+      const btn = document.getElementById('add-point-btn');
+      if (!btn) return;
+      const color = getComputedStyle(btn).backgroundColor;
+      document.querySelectorAll('.param-help').forEach(icon => {
+        icon.style.color = color;
+      });
+    }
+
+    // Initial sync
+    syncHelpIconColor();
+
+    // Observe style/class changes on the button to keep colors in sync
+    const btn = document.getElementById('add-point-btn');
+    if (btn && window.MutationObserver) {
+      const observer = new MutationObserver(syncHelpIconColor);
+      observer.observe(btn, { attributes: true, attributeFilter: ['style', 'class'] });
+    }
+  });
+</script>
 
 </body>
 </html>
