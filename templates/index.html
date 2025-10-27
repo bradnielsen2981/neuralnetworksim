@@ -39,7 +39,7 @@
     </div>
     <div class="col-md-4 d-flex flex-column">
   <button id="mode-toggle" class="btn btn-sm btn-primary mt-2 w-100" style="display:none;">Switch Mode</button>
-      <h4 class="points"><i class="fa-solid fa-table"></i> Regression</h4>
+      <h4 class="points"><i class="fa-solid fa-chart-line"></i> Regression</h4>
       <p id="mode-description" class="mb-2" style="font-size:1rem; color:#000;">
         The Regression model trains on the X and Z values below to predict future Y values. Once training is completed, a surface is created by making predictions for each X,Z point on the plane.
       </p>
@@ -51,9 +51,8 @@
   <div class="col-12 col-md-8 mb-3 mb-md-0">
       <div class="card border-0 rounded-0" style="height:500px;">
         <div class="card-header bg-lightgrey d-flex align-items-center justify-content-between">
-          <span>3D Visualizer</span>
+          <button id="add-point-btn" class="btn btn-sm btn-success" title="Add Point Mode"><i class="fa-solid fa-plus"></i> Add Point Mode</button>
           <div class="btn-group" role="group">
-            <button id="add-point-btn" class="btn btn-sm btn-success" title="Add Point Mode"><i class="fa-solid fa-plus"></i> Add Point Mode</button>
             <button id="generate-pyramid-btn" class="btn btn-sm btn-secondary" title="Add Pyramid"><i class="fa-solid fa-cube"></i> Pyramid</button>
             <button id="generate-ramp-btn" class="btn btn-sm btn-secondary" title="Add Ramp"><i class="fa-solid fa-stairs"></i> Ramp</button>
             <button id="generate-random-btn" class="btn btn-sm btn-secondary" title="Add Random Points"><i class="fa-solid fa-dice"></i> Random</button>
@@ -104,26 +103,12 @@
 <script src="static/trainchart.js"></script>
 
 <script>
-  // Match the NN parameter help icons' color to the Add Point Mode button
+  // Keep NN parameter help icons the same green as the default Add Point button (not the active highlight)
   document.addEventListener('DOMContentLoaded', function () {
-    function syncHelpIconColor() {
-      const btn = document.getElementById('add-point-btn');
-      if (!btn) return;
-      const color = getComputedStyle(btn).backgroundColor;
-      document.querySelectorAll('.param-help').forEach(icon => {
-        icon.style.color = color;
-      });
-    }
-
-    // Initial sync
-    syncHelpIconColor();
-
-    // Observe style/class changes on the button to keep colors in sync
-    const btn = document.getElementById('add-point-btn');
-    if (btn && window.MutationObserver) {
-      const observer = new MutationObserver(syncHelpIconColor);
-      observer.observe(btn, { attributes: true, attributeFilter: ['style', 'class'] });
-    }
+    // Clear any inline color so CSS (.param-help { color: var(--bs-success); }) takes effect
+    document.querySelectorAll('.param-help').forEach(icon => {
+      icon.style.color = '';
+    });
   });
 </script>
 

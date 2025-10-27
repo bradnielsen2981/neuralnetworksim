@@ -471,13 +471,11 @@ async function trainModelFromUI() {
 
         if (window.scene && window.THREE) {
             console.log('Generating new prediction mesh with batching.');
-            const step = 1;
+            const step = 0.5; // finer grid for a smoother surface
             const xMin = -25, xMax = 25, zMin = -25, zMax = 25;
             const xCount = Math.floor((xMax - xMin) / step) + 1;
             const zCount = Math.floor((zMax - zMin) / step) + 1;
             const geometry = new window.THREE.BufferGeometry();
-            const vertices = [];
-            const colors = [];
 
             // Prepare batch input for predictions
             const batchInputs = [];
@@ -485,28 +483,35 @@ async function trainModelFromUI() {
                 for (let zi = 0; zi < zCount; zi++) {
                     const x = xMin + xi * step;
                     const z = zMin + zi * step;
-                    if (x > -26 && x < 26 && z > -26 && z < 26) {
-                        batchInputs.push([x, z]);
-                    }
+                    batchInputs.push([x, z]);
                 }
             }
 
-            // Perform batch prediction
+            // Perform batch prediction (single large batch)
             const batchTensor = tf.tensor2d(batchInputs);
             const batchOutputs = await model.predict(batchTensor).array();
             batchTensor.dispose();
 
-            // Process predictions
-            for (let i = 0; i < batchInputs.length; i++) {
-                const [x, z] = batchInputs[i];
+            const vertCount = xCount * zCount;
+            const positions = new Float32Array(vertCount * 3);
+            const colors = new Float32Array(vertCount * 3);
+
+            // Fill typed arrays
+            for (let i = 0; i < vertCount; i++) {
+                const idx3 = i * 3;
+                const x = batchInputs[i][0];
+                const z = batchInputs[i][1];
                 const y = batchOutputs[i][0];
-                vertices.push(x, y, z);
-                colors.push(0, 1, 0); // Bright green color for better visibility
+                positions[idx3] = x;
+                positions[idx3 + 1] = y;
+                positions[idx3 + 2] = z;
+                // bright green
+                colors[idx3] = 0.0;
+                colors[idx3 + 1] = 1.0;
+                colors[idx3 + 2] = 0.0;
             }
 
-            console.log('Vertices count:', vertices.length / 3);
-
-            geometry.setAttribute('position', new window.THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('position', new window.THREE.Float32BufferAttribute(positions, 3));
             geometry.setAttribute('color', new window.THREE.Float32BufferAttribute(colors, 3));
 
             const indices = [];
@@ -521,13 +526,14 @@ async function trainModelFromUI() {
                 }
             }
             geometry.setIndex(indices);
-            geometry.computeVertexNormals();
+            // MeshBasicMaterial doesn't use normals; skip computing to save time
+            // geometry.computeVertexNormals();
 
-            const material = new window.THREE.MeshStandardMaterial({
+            const material = new window.THREE.MeshBasicMaterial({
                 vertexColors: true,
                 side: window.THREE.DoubleSide,
                 transparent: true,
-                opacity: 0.8
+                opacity: 0.6
             });
             const mesh = new window.THREE.Mesh(geometry, material);
             mesh.name = 'predictionMesh';

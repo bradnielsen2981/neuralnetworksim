@@ -10,12 +10,14 @@ window.addEventListener('DOMContentLoaded', () => {
         addPointMode = on;
         if (addPointMode) {
             addPointBtn.classList.add('active');
-            addPointBtn.classList.remove('btn-success');
-            addPointBtn.classList.add('btn-warning');
+            // Keep success class and use a bright green inline color when active
+            addPointBtn.classList.add('btn-success');
+            addPointBtn.classList.remove('btn-warning');
             addPointBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Point Mode (ON)';
-            // Set dark orange background
-            addPointBtn.style.backgroundColor = '#d35400';
-            addPointBtn.style.color = '#fff';
+            // Bright green background for active state
+            addPointBtn.style.backgroundColor = '#00ff00';
+            addPointBtn.style.borderColor = '#00cc00';
+            addPointBtn.style.color = '#000';
         } else {
             addPointBtn.classList.remove('active');
             addPointBtn.classList.remove('btn-warning');
@@ -23,6 +25,7 @@ window.addEventListener('DOMContentLoaded', () => {
             addPointBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Point Mode';
             // Reset to default (Bootstrap success green)
             addPointBtn.style.backgroundColor = '';
+            addPointBtn.style.borderColor = '';
             addPointBtn.style.color = '';
         }
     }
@@ -288,7 +291,7 @@ function renderPointsTable() {
 function updateModeUI() {
     // Removed alert
     if (regressionMode) {
-        pointsLabel.innerHTML = '<i class="fa-solid fa-table"></i> Regression';
+        pointsLabel.innerHTML = '<i class="fa-solid fa-chart-line"></i> Regression';
         pointsTableHead.innerHTML = `
             <tr>
                 <th scope="col">X</th>

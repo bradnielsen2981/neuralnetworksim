@@ -258,3 +258,8 @@ form#nn-parameters-form {
     padding-bottom: 0px;
     font-size:0.9rem;
 }
+
+/* Match NN parameter help icons to the default Add Point button green (Bootstrap success) */
+.param-help {
+  color: var(--bs-success);
+}
