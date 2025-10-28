@@ -134,11 +134,13 @@ window.addEventListener('DOMContentLoaded', () => {
         // Pyramid, Ramp, Random, Clear
         const pyramidBtn = document.getElementById('generate-pyramid-btn');
         const rampBtn = document.getElementById('generate-ramp-btn');
+        const waveBtn = document.getElementById('generate-wave-btn');
         const randomBtn = document.getElementById('generate-random-btn');
         const clearBtn = document.getElementById('clear-points-btn');
 
         pyramidBtn.onclick = generatePyramidPoints;
         rampBtn.onclick = generateRampPoints;
+        if (waveBtn) waveBtn.onclick = generateSineWavePoints;
         randomBtn.onclick = generateRandomPoints;
         clearBtn.onclick = clearPoints;
 
@@ -147,6 +149,7 @@ window.addEventListener('DOMContentLoaded', () => {
         pyramidBtn.style.color = '#fff';
         rampBtn.style.backgroundColor = '#ff00ff'; // magenta
         rampBtn.style.color = '#fff';
+        if (waveBtn) { waveBtn.style.backgroundColor = 'royalblue'; waveBtn.style.color = '#fff'; }
         randomBtn.style.backgroundColor = '#f1c40f'; // yellow
         randomBtn.style.color = '#222';
 
@@ -582,6 +585,35 @@ function generateRampPoints() {
     renderPointsTable();
 }
 
+function generateSineWavePoints() {
+    // Clear existing points and spheres (except hoverSphere)
+    scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
+    points.length = 0;
+
+    // Create a grid of points where y = A * sin(2πx / λ) over -20 < x < 20 and -20 < z < 20
+    const xStart = -25, xEnd = 25;
+    const zStart = -25, zEnd = 25;
+    const stepX = 3; // spacing between points on X
+    const stepZ = 9; // increased spacing between points on Z
+    const amplitude = 5;
+    const wavelength = 30; // updated from 10 to 16
+    const k = (2 * Math.PI) / wavelength;
+
+    for (let x = xStart; x <= xEnd; x += stepX) {
+        for (let z = zStart; z <= zEnd; z += stepZ) {
+            const y = Math.sin(k * x) * amplitude;
+            points.push({ x, y, z, class: 'Blue' });
+            const sphere = new THREE.Mesh(
+                new THREE.SphereGeometry(0.35, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0x4169e1 }) // royalblue to match button
+            );
+            sphere.position.set(x, y, z);
+            scene.add(sphere);
+        }
+    }
+
+    renderPointsTable();
+}
 
 
 // Click handler for placing and adjusting spheres (two-step)

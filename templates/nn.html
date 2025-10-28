@@ -7,15 +7,23 @@
           <div class="nn-controls-row">
             <div class="controls">
               <span class="nnheading">Model</span>
-              <label>Hidden Layers: <input class="centre" type="number" id="layers" min="1" max="4" value="1"></label>
-              <label>Activation:
+              <label>
+                Hidden Layers
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Number of hidden layers between input and output; more layers increase capacity to learn complex patterns but may overfit and train slower."></i>:
+                <input class="centre" type="number" id="layers" min="1" max="4" value="1">
+              </label>
+              <label>
+                Activation
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Activation tells each neuron how much to fire. Types: ReLU — negatives become 0, positives pass through; Sigmoid — squeezes values to 0–1; TanH — squeezes values to -1–1 and centers around 0."></i>:
                 <select id="activation">
                   <option value="relu">ReLU</option>
                   <option value="sigmoid">Sigmoid</option>
                   <option value="tanh">TanH</option>
                 </select>
               </label>
-              <label>Initialization:
+              <label>
+                Initialization
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Initialization sets the starting weights and biases before training. Types: Glorot (Xavier) — balanced random that usually trains well; Standard — bell‑curve random around 0; Random — picks numbers between -1 and 1."></i>:
                 <select id="initialization">
                   <option value="glorot">Glorot</option>
                   <option value="standard">Standard</option>
@@ -62,7 +70,7 @@
               <label for="learning-rate" class="form-label">Learning Rate
                 <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Fraction of the gradient used for each update; too high can diverge or skip the minimum, too low trains slowly."></i>
               </label>
-              <input type="number" id="learning-rate" class="form-control" step="0.001" value="0.01">
+              <input type="number" id="learning-rate" class="form-control" step="0.001" value="0.01" min="0.001" max="0.1">
             </div>
             <div class="mb-2">
               <label for="momentum" class="form-label">Momentum
@@ -77,19 +85,19 @@
               <label for="epochs" class="form-label">Epochs
                 <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="The number of passes through all the data whilst applying gradient descent to the model."></i>
               </label>
-              <input type="number" id="epochs" class="form-control" value="500">
+              <input type="number" id="epochs" class="form-control" value="500" min="1" max="5000" step="1">
             </div>
             <div class="mb-2">
               <label for="earlystopping" class="form-label">Early Stopping
                 <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Stop when improvement becomes too small; this sets the minimum improvement counted as progress."></i>
               </label>
-              <input type="number" id="earlystopping" class="form-control" value="0.01">
+              <input type="number" id="earlystopping" class="form-control" value="0.01" min="0" max="5" step="0.001">
             </div>
             <div class="mb-2">
               <label for="patience" class="form-label">Patience
                 <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="How many epochs with no (or tiny) improvement are allowed before stopping early."></i>
               </label>
-              <input type="number" id="patience" class="form-control" value="50">
+              <input type="number" id="patience" class="form-control" value="50" min="10" max="500">
             </div>
             <button type="button" id="train-btn" class="btn btn-primary mt-2 w-100">Train</button>
             
@@ -108,6 +116,62 @@
       const fmt = v => Number(v).toFixed(1);
       display.textContent = fmt(slider.value);
       slider.addEventListener('input', () => display.textContent = fmt(slider.value));
+    }
+
+    // Clamp epochs in real-time to [1, 5000]
+    const epochsInput = document.getElementById('epochs');
+    if (epochsInput) {
+      const clampEpochs = () => {
+        let v = parseInt(epochsInput.value, 10);
+        if (!Number.isFinite(v)) v = 1;
+        if (v < 1) v = 1;
+        if (v > 5000) v = 5000;
+        epochsInput.value = String(v);
+      };
+      epochsInput.addEventListener('input', clampEpochs);
+      epochsInput.addEventListener('blur', clampEpochs);
+    }
+
+    // Clamp learning rate to [0.001, 0.1]
+    const lrInput = document.getElementById('learning-rate');
+    if (lrInput) {
+      const clampLR = () => {
+        let v = parseFloat(lrInput.value);
+        if (!Number.isFinite(v)) v = 0.01;
+        if (v < 0.001) v = 0.001;
+        if (v > 0.1) v = 0.1;
+        lrInput.value = String(v);
+      };
+      lrInput.addEventListener('input', clampLR);
+      lrInput.addEventListener('blur', clampLR);
+    }
+
+    // Clamp patience to [10, 500]
+    const patienceInput = document.getElementById('patience');
+    if (patienceInput) {
+      const clampPatience = () => {
+        let v = parseInt(patienceInput.value, 10);
+        if (!Number.isFinite(v)) v = 10;
+        if (v < 10) v = 10;
+        if (v > 500) v = 500;
+        patienceInput.value = String(v);
+      };
+      patienceInput.addEventListener('input', clampPatience);
+      patienceInput.addEventListener('blur', clampPatience);
+    }
+
+    // Clamp early stopping to [0, 5]
+    const esInput = document.getElementById('earlystopping');
+    if (esInput) {
+      const clampES = () => {
+        let v = parseFloat(esInput.value);
+        if (!Number.isFinite(v)) v = 0;
+        if (v < 0) v = 0;
+        if (v > 5) v = 5;
+        esInput.value = String(v);
+      };
+      esInput.addEventListener('input', clampES);
+      esInput.addEventListener('blur', clampES);
     }
   });
 </script>

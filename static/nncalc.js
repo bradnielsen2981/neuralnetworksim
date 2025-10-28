@@ -22,14 +22,38 @@ function getPointsData() {
 
 // Helper to get learning parameters from form
 function getLearningParams() {
-    const lr = parseFloat(document.getElementById('learning-rate').value);
+    const lrInput = document.getElementById('learning-rate');
+    let lr = parseFloat(lrInput.value);
     let mom = parseFloat(document.getElementById('momentum').value);
     if (!isFinite(mom)) mom = 0;
     // Clamp momentum to [0, 1]
     mom = Math.max(0, Math.min(1, mom));
-    const ep = parseInt(document.getElementById('epochs').value);
-    const es = parseFloat(document.getElementById('earlystopping').value);
-    const pat = parseInt((document.getElementById('patience') && document.getElementById('patience').value) || 50);
+    const epochsInput = document.getElementById('epochs');
+    let ep = parseInt(epochsInput.value);
+    const esInput = document.getElementById('earlystopping');
+    let es = parseFloat(esInput.value);
+    const patienceInput = document.getElementById('patience');
+    let pat = parseInt((patienceInput && patienceInput.value) || 50);
+
+    // Enforce hard maximum of 5000 epochs
+    if (!isFinite(ep) || ep < 1) ep = 1;
+    if (ep > 5000) { ep = 5000; if (epochsInput) epochsInput.value = String(ep); }
+
+    // Clamp learning rate to [0.001, 0.1]
+    if (!isFinite(lr)) lr = 0.01;
+    if (lr < 0.001) { lr = 0.001; if (lrInput) lrInput.value = String(lr); }
+    if (lr > 0.1) { lr = 0.1; if (lrInput) lrInput.value = String(lr); }
+
+    // Clamp patience to [10, 500]
+    if (!isFinite(pat) || pat < 10) pat = 10;
+    if (pat > 500) { pat = 500; }
+    if (patienceInput) patienceInput.value = String(pat);
+
+    // Clamp early stopping to [0, 5]
+    if (!isFinite(es) || es < 0) es = 0;
+    if (es > 5) { es = 5; }
+    if (esInput) esInput.value = String(es);
+
     return {
         learningRate: lr,
         momentum: mom,
@@ -54,7 +78,7 @@ async function trainModelFromUI() {
     console.log('Train button clicked');
     const neuronCounts = getNetworkStructure();
     const activation = getActivation();
-    const { learningRate, momentum, epochs, patience } = getLearningParams();
+    const { learningRate, momentum, epochs, patience, earlyStopping } = getLearningParams();
     // Prepare training data
     const points = getPointsData();
 
@@ -306,10 +330,10 @@ async function trainModelFromUI() {
         const xsTensor = tf.tensor2d(xs);
         const ysTensor = tf.tensor2d(ys);
         const clipValue = 1.0; // clip-by-value threshold (tune to 0.5–5.0 as needed)
-        const minDelta = 1e-4; // minimum improvement to reset patience
+        const minDelta = (typeof earlyStopping === 'number' && isFinite(earlyStopping)) ? earlyStopping : 1e-4; // minimum improvement to reset patience
         let stoppedEarly = false;
         let lastFiniteLoss = null; // track last finite loss
-        let stopReason = null; // 'nan-inf' | 'early' | null
+        let stopReason = null; // 'nan-inf' | 'patience' | 'early-threshold' | null
 
         for (let epoch = 0; epoch < epochs; epoch++) {
             // Compute loss and gradients w.r.t. model variables
@@ -362,25 +386,19 @@ async function trainModelFromUI() {
                 });
             } else {
                 epochsNoImprovement += 1;
-                const patienceVal = (typeof patience === 'number' && isFinite(patience) && patience > 0) ? patience : 50;
-                if (epochsNoImprovement >= patienceVal) {
+                const patienceVal = (typeof patience === 'number' && isFinite(patience) && patience > 0) ? patience : 0;
+                if (patienceVal > 0 && epochsNoImprovement >= patienceVal) {
                     stoppedEarly = true;
-                    stopReason = 'early';
-                    const modalBody = document.getElementById('training-modal-body');
-                    if (modalBody) {
-                        const info = document.createElement('div');
-                        info.className = 'training-status-msg';
-                        info.style.marginTop = '10px';
-                        const stoppedEpoch = epoch + 1;
-                        info.innerHTML = `
-                            <span class="badge bg-warning text-dark">Stopped early at epoch ${stoppedEpoch}</span>
-                            <span class="badge bg-info text-dark ms-2">Restored best epoch ${bestEpoch}</span>
-                            <span class="badge bg-secondary ms-2">Final loss: ${lastFiniteLoss != null ? lastFiniteLoss.toFixed(6) : 'n/a'}</span>
-                            <span class="badge bg-secondary ms-2">Best loss: ${isFinite(bestLoss) ? bestLoss.toFixed(6) : 'n/a'}</span>
-                        `;
-                        modalBody.appendChild(info);
-                    }
-                    // Dispose current grads and break loop
+                    stopReason = 'patience';
+                    // Dispose current grads and break loop (UI message will be appended at the end)
+                    vg.value.dispose();
+                    Object.values(vg.grads).forEach(t => t.dispose());
+                    break;
+                }
+                // Optional: if no patience but earlyStopping set, allow immediate threshold-based stop
+                if (patienceVal === 0 && minDelta > 0) {
+                    stoppedEarly = true;
+                    stopReason = 'early-threshold';
                     vg.value.dispose();
                     Object.values(vg.grads).forEach(t => t.dispose());
                     break;
@@ -440,22 +458,17 @@ async function trainModelFromUI() {
             }
         }
 
-        // === Update modal content to "Training complete" (only on normal completion) ===
-        if (modal && !stoppedEarly && stopReason === null) {
+        // === Update modal content to "Training complete" (only add final loss, avoid redundant banners) ===
+        if (modal) {
             const modalBody = document.getElementById('training-modal-body');
             if (modalBody) {
-                // When training is complete, add a div below the existing content
-                const trainingCompleteDiv = document.createElement('div');
-                trainingCompleteDiv.className = 'training-status-msg';
-                trainingCompleteDiv.style.marginTop = '10px';
-                trainingCompleteDiv.innerHTML = '<span class="badge bg-success">Training Complete</span>';
-                document.getElementById('training-modal-body').appendChild(trainingCompleteDiv);
-
-                // Also show final loss
                 const finalLossDiv = document.createElement('div');
                 finalLossDiv.className = 'training-status-msg';
                 finalLossDiv.style.marginTop = '6px';
-                finalLossDiv.innerHTML = `<span class="badge bg-secondary">Final loss: ${typeof lastFiniteLoss === 'number' ? lastFiniteLoss.toFixed(6) : 'n/a'}</span>`;
+                // Use restored best loss when patience triggered; otherwise show last finite loss
+                const finalLossToReport = (stopReason === 'patience' && isFinite(bestLoss)) ? bestLoss : lastFiniteLoss;
+                const finalLossText = (typeof finalLossToReport === 'number' && isFinite(finalLossToReport)) ? finalLossToReport.toFixed(6) : 'n/a';
+                finalLossDiv.innerHTML = `<span class="badge bg-secondary">Final loss: ${finalLossText}</span>`;
                 modalBody.appendChild(finalLossDiv);
             }
         }
@@ -554,6 +567,31 @@ async function trainModelFromUI() {
             if (window.camera) {
                 console.log('Camera position:', window.camera.position);
                 console.log('Camera target:', window.controls.target);
+            }
+        }
+
+        // === Append unified outcome message at the bottom ===
+        if (modal) {
+            const modalBody = document.getElementById('training-modal-body');
+            if (modalBody) {
+                const reasonDiv = document.createElement('div');
+                reasonDiv.className = 'training-status-msg';
+                reasonDiv.style.marginTop = '12px';
+                reasonDiv.style.borderTop = '1px solid #ddd';
+                reasonDiv.style.paddingTop = '8px';
+                let msg = '';
+                if (stopReason === 'patience') {
+                    const be = (typeof bestEpoch === 'number' && bestEpoch > 0) ? bestEpoch : 'n/a';
+                    msg = `<span class="badge bg-warning text-dark">Training stopped early (patience); restored to epoch ${be}</span>`;
+                } else if (stopReason === 'early-threshold') {
+                    msg = '<span class="badge bg-warning text-dark">Training stopped early (early stopping threshold)</span>';
+                } else if (stopReason === 'nan-inf') {
+                    msg = '<span class="badge bg-danger">Training stopped due to unstable loss (NaN/Inf)</span>';
+                } else {
+                    msg = '<span class="badge bg-success">Training completed: epoch limit reached</span>';
+                }
+                reasonDiv.innerHTML = msg;
+                modalBody.appendChild(reasonDiv);
             }
         }
     } catch (err) {
