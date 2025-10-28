@@ -140,16 +140,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
         pyramidBtn.onclick = generatePyramidPoints;
         rampBtn.onclick = generateRampPoints;
-        if (waveBtn) waveBtn.onclick = generateSineWavePoints;
-        randomBtn.onclick = generateRandomPoints;
-        clearBtn.onclick = clearPoints;
-
-        // Set button colors
+        if (waveBtn) { waveBtn.onclick = generateSineWavePoints; waveBtn.style.backgroundColor = '#e67e22'; waveBtn.style.color = '#fff'; }
+        // Restore Pyramid & Ramp button colors
         pyramidBtn.style.backgroundColor = '#2980b9'; // blue
         pyramidBtn.style.color = '#fff';
         rampBtn.style.backgroundColor = '#ff00ff'; // magenta
         rampBtn.style.color = '#fff';
-        if (waveBtn) { waveBtn.style.backgroundColor = 'royalblue'; waveBtn.style.color = '#fff'; }
         randomBtn.style.backgroundColor = '#f1c40f'; // yellow
         randomBtn.style.color = '#222';
 
@@ -488,9 +484,9 @@ function generatePyramidPoints() {
     scene.children.filter(obj => obj !== hoverSphere && obj.type === 'Mesh').forEach(obj => scene.remove(obj));
     points.length = 0;
     // Pyramid parameters
-    const baseSize = 16; // width of base
-    const height = 12;
-    const baseY = 0;
+    const baseSize = 32; // increased width of base (was 16)
+    const height = 20;   // increased height (was 12)
+    const baseY = 0;     // keep base sitting on the plane
     const cx = 0, cz = 0; // center
     // 4 corners of base
     const corners = [
@@ -537,10 +533,34 @@ function generatePyramidPoints() {
             uniq[key] = pt;
         }
     }
-    const allPts = Object.values(uniq);
+    let allPts = Object.values(uniq);
+
+    // Add 3 points on each side of the outer XZ square at y=0 within (-25,25)
+    const sidePos = [-16, 0, 16]; // evenly spaced along sides, inside bounds
+    const borderPts = [];
+    // Top (z ~ +24)
+    sidePos.forEach(x => borderPts.push({ x, y: 0, z: 24 }));
+    // Bottom (z ~ -24)
+    sidePos.forEach(x => borderPts.push({ x, y: 0, z: -24 }));
+    // Left (x ~ -24)
+    sidePos.forEach(z => borderPts.push({ x: -24, y: 0, z }));
+    // Right (x ~ +24)
+    sidePos.forEach(z => borderPts.push({ x: 24, y: 0, z }));
+    // Corners at the very edges of the XZ plane
+    borderPts.push(
+        { x: -25, y: 0, z: -25 },
+        { x:  25, y: 0, z: -25 },
+        { x:  25, y: 0, z:  25 },
+        { x: -25, y: 0, z:  25 }
+    );
+
+    // Prepend to preserve these when trimming
+    allPts = [...borderPts, ...allPts];
+
     // If more than 64, trim; if less, add apex again
     while (allPts.length < 64) allPts.push({ ...apex });
     while (allPts.length > 64) allPts.pop();
+
     for (const pt of allPts) {
         points.push({ x: pt.x, y: pt.y !== undefined ? pt.y : baseY, z: pt.z, class: 'Blue' });
         const sphere = new THREE.Mesh(
@@ -605,7 +625,7 @@ function generateSineWavePoints() {
             points.push({ x, y, z, class: 'Blue' });
             const sphere = new THREE.Mesh(
                 new THREE.SphereGeometry(0.35, 16, 16),
-                new THREE.MeshStandardMaterial({ color: 0x4169e1 }) // royalblue to match button
+                new THREE.MeshStandardMaterial({ color: 0xe67e22 }) // orange to match Wave button
             );
             sphere.position.set(x, y, z);
             scene.add(sphere);

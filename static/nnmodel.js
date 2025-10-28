@@ -8,8 +8,10 @@ let inputX = 1; // X input
 let inputZ = 1; // Z input
 let inputNeuronPositions = [];
 let hoveredInputNeuronIndex = null; // Track hovered input neuron
+// New: track hover for any neuron (layer, index) and store positions for hover detection
+let hoveredNeuron = { layer: null, index: null };
+let neuronPositions = [];
 
-//-------- Network State Variables --------//
 //-------- Network State Variables --------//
 // weights and biases are now global (window.weights, window.biases)
 let layerSizes = [];
@@ -92,9 +94,9 @@ function activate(x, activation) {
 function drawInputNeuron(x, y, label, inputIndex) {
     ctx.beginPath();
     ctx.arc(x, y, neuronRadius, 0, Math.PI * 2);
-    // Highlight if hovered
-    if (hoveredInputNeuronIndex === inputIndex) {
-        ctx.fillStyle = '#39ff14'; // Bright green
+    // Restore bright green hover color for input neurons
+    if (hoveredNeuron.layer === 0 && hoveredNeuron.index === inputIndex) {
+        ctx.fillStyle = '#39ff14'; // Bright green hover
     } else {
         ctx.fillStyle = '#fff';
     }
@@ -108,15 +110,19 @@ function drawInputNeuron(x, y, label, inputIndex) {
     ctx.textBaseline = 'middle';
     ctx.fillText(label, x, y);
 
-    // Store position for click detection
+    // Store position for click and hover detection
     inputNeuronPositions.push({x, y, radius: neuronRadius, index: inputIndex});
+    neuronPositions.push({x, y, radius: neuronRadius, layer: 0, index: inputIndex});
 }
 
 // Draw neuron with activation curve
-function drawNeuron(x, y, activation, inputVal, outputVal) {
+function drawNeuron(x, y, activation, inputVal, outputVal, layer, index) {
     ctx.beginPath();
     ctx.arc(x, y, neuronRadius, 0, Math.PI * 2);
-    ctx.fillStyle = '#007fff'; // Azure blue
+    // Base color royalblue, lighten slightly on hover
+    const baseColor = '#4169e1';
+    const hoverColor = '#5a82ff';
+    ctx.fillStyle = (hoveredNeuron.layer === layer && hoveredNeuron.index === index) ? hoverColor : baseColor;
     ctx.fill();
     ctx.strokeStyle = '#000'; // Crisp black
     ctx.lineWidth = 2;
@@ -152,6 +158,9 @@ function drawNeuron(x, y, activation, inputVal, outputVal) {
     ctx.textBaseline = 'middle';
     ctx.fillText(`${inputVal.toFixed(2)}`, x - neuronRadius * 0.5 + 8, y - neuronRadius * 0.5 + 3);
     ctx.fillText(`${outputVal.toFixed(2)}`, x + neuronRadius * 0.5 - 12, y + neuronRadius * 0.5 + 3);
+
+    // Store position for hover detection
+    neuronPositions.push({ x, y, radius: neuronRadius, layer, index });
 }
 
 // Draw connections
@@ -267,6 +276,7 @@ function drawLayerControls(totalLayers, layerSpacing, leftOffset) {
 function drawNetwork() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     inputNeuronPositions = []; // Reset input neuron positions on each redraw
+    neuronPositions = []; // Reset all neuron positions
 
     // Use global window variables for network configuration
     const numHiddenLayers = window.layernumber !== undefined ? window.layernumber : Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
@@ -346,7 +356,15 @@ function drawNetwork() {
                 const labels = ["X", "Z"];
                 drawInputNeuron(x, y, `${labels[n]}=${outputs[0][n]}`, n);
             } else {
-                drawNeuron(x, y, activation, preActivations[l][n], outputs[l][n]);
+                drawNeuron(x, y, activation, preActivations[l][n], outputs[l][n], l, n);
+                // If this is the output layer neuron, draw a large 'Y' above it
+                if (l === totalLayers - 1) {
+                    ctx.fillStyle = '#000';
+                    ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.6))}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText('Y', x, y - neuronRadius - 6);
+                }
             }
         }
     }
@@ -416,23 +434,30 @@ canvas.addEventListener('mousemove', (event) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = event.clientX - rect.left;
     const mouseY = event.clientY - rect.top;
+
     let found = null;
-    for (const neuron of inputNeuronPositions) {
-        const distance = Math.sqrt(Math.pow(mouseX - neuron.x, 2) + Math.pow(mouseY - neuron.y, 2));
-        if (distance <= neuron.radius) {
-            found = neuron.index;
+    for (const neuron of neuronPositions) {
+        const dx = mouseX - neuron.x;
+        const dy = mouseY - neuron.y;
+        if (Math.sqrt(dx*dx + dy*dy) <= neuron.radius) {
+            found = { layer: neuron.layer, index: neuron.index };
             break;
         }
     }
-    if (hoveredInputNeuronIndex !== found) {
-        hoveredInputNeuronIndex = found;
+
+    const changed = (hoveredNeuron.layer !== (found ? found.layer : null)) || (hoveredNeuron.index !== (found ? found.index : null));
+    if (changed) {
+        hoveredNeuron = found ? { layer: found.layer, index: found.index } : { layer: null, index: null };
+        // Maintain legacy input hover index for compatibility (not used elsewhere now)
+        hoveredInputNeuronIndex = (found && found.layer === 0) ? found.index : null;
         drawNetwork();
     }
 });
 
 // Remove highlight when mouse leaves canvas
 canvas.addEventListener('mouseleave', () => {
-    if (hoveredInputNeuronIndex !== null) {
+    if (hoveredNeuron.layer !== null || hoveredNeuron.index !== null) {
+        hoveredNeuron = { layer: null, index: null };
         hoveredInputNeuronIndex = null;
         drawNetwork();
     }

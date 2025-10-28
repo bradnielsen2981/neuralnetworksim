@@ -347,7 +347,7 @@ async function trainModelFromUI() {
 
             // Update loss chart
             if (typeof window.updateLossChart === 'function' && isFinite(loss)) {
-                try { window.updateLossChart(epoch + 1, loss); } catch (_) {}
+                try { window.updateLossChart(epoch, loss); } catch (_) {}
             }
             // Track last finite loss
             if (isFinite(loss)) lastFiniteLoss = loss;

@@ -9,12 +9,12 @@
               <span class="nnheading">Model</span>
               <label>
                 Hidden Layers
-                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Number of hidden layers between input and output; more layers increase capacity to learn complex patterns but may overfit and train slower."></i>:
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Number of hidden layers between input and output; more layers increase capacity to learn complex patterns but may overfit and train slower."></i>
                 <input class="centre" type="number" id="layers" min="1" max="4" value="1">
               </label>
               <label>
                 Activation
-                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Activation tells each neuron how much to fire. Types: ReLU — negatives become 0, positives pass through; Sigmoid — squeezes values to 0–1; TanH — squeezes values to -1–1 and centers around 0."></i>:
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Activation tells each neuron how much to fire. Types: ReLU — negatives become 0, positives pass through; Sigmoid — squeezes values to 0–1; TanH — squeezes values to -1–1 and centers around 0."></i>
                 <select id="activation">
                   <option value="relu">ReLU</option>
                   <option value="sigmoid">Sigmoid</option>
@@ -23,7 +23,7 @@
               </label>
               <label>
                 Initialization
-                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Initialization sets the starting weights and biases before training. Types: Glorot (Xavier) — balanced random that usually trains well; Standard — bell‑curve random around 0; Random — picks numbers between -1 and 1."></i>:
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Initialization sets the starting weights and biases before training. Types: Glorot (Xavier) — balanced random that usually trains well; Standard — bell‑curve random around 0; Random — picks numbers between -1 and 1."></i>
                 <select id="initialization">
                   <option value="glorot">Glorot</option>
                   <option value="standard">Standard</option>
@@ -118,7 +118,7 @@
       slider.addEventListener('input', () => display.textContent = fmt(slider.value));
     }
 
-    // Clamp epochs in real-time to [1, 5000]
+    // Clamp epochs on blur to [1, 5000]
     const epochsInput = document.getElementById('epochs');
     if (epochsInput) {
       const clampEpochs = () => {
@@ -128,11 +128,11 @@
         if (v > 5000) v = 5000;
         epochsInput.value = String(v);
       };
-      epochsInput.addEventListener('input', clampEpochs);
+      // Removed real-time clamping; allow free typing, clamp on blur only
       epochsInput.addEventListener('blur', clampEpochs);
     }
 
-    // Clamp learning rate to [0.001, 0.1]
+    // Clamp learning rate on blur to [0.001, 0.1]
     const lrInput = document.getElementById('learning-rate');
     if (lrInput) {
       const clampLR = () => {
@@ -142,11 +142,25 @@
         if (v > 0.1) v = 0.1;
         lrInput.value = String(v);
       };
-      lrInput.addEventListener('input', clampLR);
+      // Removed real-time clamping; allow free typing, clamp on blur only
       lrInput.addEventListener('blur', clampLR);
     }
 
-    // Clamp patience to [10, 500]
+    // When Activation is TanH or Sigmoid, set LR to 0.001
+    const activationSelect = document.getElementById('activation');
+    if (activationSelect && lrInput) {
+      const maybeAdjustLR = () => {
+        const val = String(activationSelect.value || '').toLowerCase();
+        if (val === 'tanh' || val === 'sigmoid') {
+          lrInput.value = '0.001';
+        }
+      };
+      activationSelect.addEventListener('change', maybeAdjustLR);
+      // Also run once on load to apply if default is TanH/Sigmoid
+      maybeAdjustLR();
+    }
+
+    // Clamp patience on blur to [10, 500]
     const patienceInput = document.getElementById('patience');
     if (patienceInput) {
       const clampPatience = () => {
@@ -156,11 +170,11 @@
         if (v > 500) v = 500;
         patienceInput.value = String(v);
       };
-      patienceInput.addEventListener('input', clampPatience);
+      // Removed real-time clamping; allow free typing, clamp on blur only
       patienceInput.addEventListener('blur', clampPatience);
     }
 
-    // Clamp early stopping to [0, 5]
+    // Clamp early stopping on blur to [0, 5]
     const esInput = document.getElementById('earlystopping');
     if (esInput) {
       const clampES = () => {
@@ -170,7 +184,7 @@
         if (v > 5) v = 5;
         esInput.value = String(v);
       };
-      esInput.addEventListener('input', clampES);
+      // Removed real-time clamping; allow free typing, clamp on blur only
       esInput.addEventListener('blur', clampES);
     }
   });

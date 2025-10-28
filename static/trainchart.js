@@ -9,11 +9,15 @@ const lossChart = new Chart(chartContext, {
             data: [], // will store objects: { x: epoch, y: loss }
             borderColor: 'rgba(255, 99, 132, 1)',
             backgroundColor: 'rgba(255, 99, 132, 0.2)',
-            borderWidth: 2
+            borderWidth: 2,
+            tension: 0,
+            spanGaps: false,
+            clip: 0
         }]
     },
     options: {
         responsive: true,
+        animation: { duration: 0 },
         plugins: {
             legend: {
                 display: true,
@@ -24,7 +28,11 @@ const lossChart = new Chart(chartContext, {
             x: {
                 type: 'linear',
                 min: 0,
-                max: 300, // show a 300-epoch window
+                max: 0, // start with no future beyond 0
+                bounds: 'data', // do not extend past data
+                offset: false,
+                grace: 0,
+                ticks: { precision: 0 },
                 title: {
                     display: true,
                     text: 'Epochs'
@@ -50,14 +58,15 @@ function updateLossChart(epoch, loss) {
     // Push as an XY point; no label push
     lossChart.data.datasets[0].data.push({ x: epoch, y: loss });
 
-    // Keep a sliding 300-epoch window on the X axis
+    // Anchor X-axis to the last data point and cap to last 250 epochs
     const xScale = lossChart.options.scales.x;
     if (xScale) {
-        const span = 300;
-        const newMax = Math.max(span, epoch);
-        const newMin = Math.max(0, newMax - span);
-        xScale.min = newMin;
-        xScale.max = newMin + span;
+        const data = lossChart.data.datasets[0].data;
+        const lastX = data.length ? data[data.length - 1].x : epoch;
+        const end = lastX;
+        const start = Math.max(0, end - 250);
+        xScale.min = start;
+        xScale.max = end;
     }
 
     // Dynamic Y-axis: keep losses in the lower half of the chart
@@ -96,17 +105,17 @@ function updateLossChart(epoch, loss) {
         yScale.min = 0;
     }
 
-    lossChart.update();
+    lossChart.update('none');
 }
 
 // Function to reset/clear the loss chart when training starts
 function resetLossChart() {
     // Clear only the dataset
     lossChart.data.datasets[0].data = [];
-    // Restore X window to 0–300
+    // Restore X window anchored at 0 (no space to the right)
     if (lossChart.options && lossChart.options.scales && lossChart.options.scales.x) {
         lossChart.options.scales.x.min = 0;
-        lossChart.options.scales.x.max = 300;
+        lossChart.options.scales.x.max = 0;
     }
     // Reset Y scale start back to 5 and state
     if (lossChart.options && lossChart.options.scales && lossChart.options.scales.y) {

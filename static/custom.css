@@ -38,7 +38,7 @@ a:hover, a:focus { color: var(--color-link-hover); }
   --color-bg: #f6f8fc;              /* App background */
   --color-surface: #ffffff;         /* Card/background surfaces */
   --color-surface-alt: #eef3fb;     /* Subtle alternate surface */
-  --color-header-bg: #d9e7ff;       /* Card header background */
+  --color-header-bg: #d0e1ff;       /* Card header background (20% toward body #abcbff from original) */
   --color-border: #c9d4e6;          /* Unified border color */
   --color-text: #0f172a;            /* Primary text */
   --color-muted: #55657e;           /* Muted text */
@@ -339,9 +339,9 @@ form#nn-parameters-form {
     font-size:0.9rem;
 }
 
-/* Make parameter help icons forest green */
+/* Make parameter help icons match the Regression speech bubble color */
 .param-help {
-  color: #228B22;
+  color: #5478E4; /* same as speech bubble background */
 }
 
 p.mt-2.small.text-muted {
@@ -408,6 +408,42 @@ p.mt-2.small.text-muted {
   color: #fff !important;
 }
 
+/* Ensure Add Point Mode ON is bright green when active with darker border */
+#add-point-btn.active {
+  background-color: #00ff00 !important;
+  border: 1px solid #999 !important;
+  color: #000 !important;
+}
+#add-point-btn.active:hover {
+  filter: brightness(1.05);
+  border-color: #777 !important;
+}
+
+/* Thin darker grey borders for primary action buttons */
+#add-point-btn,
+#generate-pyramid-btn,
+#generate-ramp-btn,
+#generate-wave-btn,
+#generate-random-btn {
+  border: 1px solid #999 !important;
+}
+/* Slightly darker border on hover */
+#add-point-btn:hover,
+#generate-pyramid-btn:hover,
+#generate-ramp-btn:hover,
+#generate-wave-btn:hover,
+#generate-random-btn:hover {
+  border-color: #777 !important;
+}
+
+/* Hover color nudges for buttons controlled primarily by CSS colors */
+#add-point-btn:not(.active):hover { background-color: #2fbf2f !important; }
+#generate-pyramid-btn:hover { background-color: #3a8ec1 !important; }
+#generate-ramp-btn:hover { background-color: #ff33ff !important; }
+#generate-random-btn:hover { background-color: #f6d046 !important; }
+/* Wave button hover nudge */
+#generate-wave-btn:hover { background-color: #ed8f2e !important; }
+
 /* Modern fun 2010s font for the main heading */
 /* Cyberpunk, serious, bold heading style */
 .site-title {
@@ -430,15 +466,30 @@ p.mt-2.small.text-muted {
 }
 
 #train-btn {
-    background-color: #007fff !important;
+    background-color: royalblue !important; /* match Wave button */
     border-color: #000000 !important;
     color: #fff !important;
 }
 
+/* Refine Train button hover: bright azure blue, no glow */
 #train-btn:hover, #train-btn:focus {
-  background-color: #005eff !important; /* darker sky blue */
+  background-color: #007fff !important; /* bright azure */
   border-color: #000000 !important;
+  box-shadow: none !important; /* remove glow */
 }
+
+/* Momentum slider color to match Wave button */
+#momentum {
+  accent-color: royalblue;
+}
+
+/* Improve cross-browser slider theming */
+#momentum::-webkit-slider-thumb { background: royalblue; }
+#momentum::-moz-range-thumb { background: royalblue; }
+#momentum::-ms-thumb { background: royalblue; }
+#momentum::-webkit-slider-runnable-track { background: #cdd7fb; }
+#momentum::-moz-range-track { background: #cdd7fb; }
+#momentum::-ms-track { background: #cdd7fb; }
 
 /* Responsive width for training modal on mobile */
 @media (max-width: 768px) {
@@ -454,4 +505,59 @@ p.mt-2.small.text-muted {
     width: 100% !important;
     height: 220px !important;
   }
+}
+
+/* Speech bubble for Regression section */
+.speech-bubble {
+  position: relative;
+  background: #5478E4; /* ~10% lighter than royalblue (#4169E1) */
+  color: #fff; /* white text */
+  border: 1px solid #000;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  margin-top: 6px;
+}
+.speech-bubble a { color: #fff; }
+.speech-bubble:after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: -12px;
+  width: 0;
+  height: 0;
+  border: 12px solid transparent;
+  border-right-color: #5478E4; /* match bubble background */
+  border-left: 0;
+  margin-top: 0;
+}
+.speech-bubble:before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  left: -14px;
+  width: 0;
+  height: 0;
+  border: 14px solid transparent;
+  border-right-color: #000;
+  border-left: 0;
+}
+
+/* Make sure inner header has minimal margin to fit bubble nicely */
+.speech-bubble > .points { margin-top: 0; }
+
+@media (max-width: 768px) {
+  .speech-bubble { padding: 10px 12px; }
+}
+
+/* Footer links: match Train button royal blue */
+.footer-card a,
+.footer-card a:hover,
+.footer-card a:focus {
+  color: #4169e1 !important; /* royalblue */
+}
+
+/* Question mark icons: 20% more yellow than #e67e22 -> #e88c1e */
+.param-help {
+  color: #5478E4; /* same as speech bubble background */
 }
