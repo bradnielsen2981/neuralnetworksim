@@ -46,6 +46,11 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
 
     window.weights = [];
     window.biases = [];
+    // Determine current activation to choose proper scaling for 'standard'
+    const currentActivation = (typeof window !== 'undefined' && window.activationtype)
+        ? window.activationtype
+        : (document.getElementById('activation') ? document.getElementById('activation').value : 'relu');
+
     for (let l = 0; l < layerSizes.length - 1; l++) {
         window.weights.push([]);
         window.biases.push([]);
@@ -68,7 +73,14 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
                         weight = (Math.random() * 2 - 1) * limit;
                         break;
                     case 'standard':
-                        weight = getNormalRandom();
+                        // Scaled normal per activation:
+                        // ReLU -> He: std = sqrt(2/fan_in)
+                        // Sigmoid/TanH -> Glorot-like per request: std = sqrt(1/fan_in)
+                        {
+                            const isRelu = (currentActivation === 'relu');
+                            const std = Math.sqrt(isRelu ? (2 / Math.max(1, fan_in)) : (1 / Math.max(1, fan_in)));
+                            weight = getNormalRandom() * std;
+                        }
                         break;
                     case 'random':
                     default:
@@ -88,6 +100,23 @@ function activate(x, activation) {
     if (activation === 'sigmoid') return 1 / (1 + Math.exp(-x));
     if (activation === 'tanh') return Math.tanh(x);
     return x;
+}
+
+// Color helpers for activation-based shading
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+function mixRGBArray(a, b, t) {
+    return [
+        Math.round(a[0] + (b[0] - a[0]) * t),
+        Math.round(a[1] + (b[1] - a[1]) * t),
+        Math.round(a[2] + (b[2] - a[2]) * t)
+    ];
+}
+function toCssRGB(arr) { return `rgb(${arr[0]}, ${arr[1]}, ${arr[2]})`; }
+function activationStrength(activation, outVal) {
+    if (activation === 'sigmoid') return clamp01(outVal);
+    if (activation === 'tanh') return clamp01(Math.abs(outVal));
+    // relu and others: compress using tanh to keep bounded
+    return clamp01(Math.tanh(Math.max(0, outVal) / 2));
 }
 
 //-------- Drawing Functions --------//
@@ -119,10 +148,24 @@ function drawInputNeuron(x, y, label, inputIndex) {
 function drawNeuron(x, y, activation, inputVal, outputVal, layer, index) {
     ctx.beginPath();
     ctx.arc(x, y, neuronRadius, 0, Math.PI * 2);
-    // Base color royalblue, lighten slightly on hover
-    const baseColor = '#4169e1';
-    const hoverColor = '#5a82ff';
-    ctx.fillStyle = (hoveredNeuron.layer === layer && hoveredNeuron.index === index) ? hoverColor : baseColor;
+    // Base: royalblue, then tint based on activation (more red when strong, more blue when weak)
+    const baseBlue = [65, 105, 225];      // #4169e1
+    const blueDeep = [30, 60, 180];       // deeper blue for weak activation
+    const greyTint = [85, 85, 85];        // slight grey to dull very weak
+    const redTint = [231, 76, 60];        // reddish for strong activation
+    const isHovered = (hoveredNeuron.layer === layer && hoveredNeuron.index === index);
+
+    let s = activationStrength(activation, outputVal); // 0..1 strength
+    let fillRGB = baseBlue.slice();
+    // Push weak activations bluer (and only a touch greyer)
+    fillRGB = mixRGBArray(fillRGB, blueDeep, (1 - s) * 0.30);
+    fillRGB = mixRGBArray(fillRGB, greyTint, (1 - s) * 0.10);
+    // Make strong activations more red than before
+    fillRGB = mixRGBArray(fillRGB, redTint, s * 0.50);
+    if (isHovered) {
+        fillRGB = mixRGBArray(fillRGB, [255, 255, 255], 0.12);
+    }
+    ctx.fillStyle = toCssRGB(fillRGB);
     ctx.fill();
     ctx.strokeStyle = '#000'; // Crisp black
     ctx.lineWidth = 2;
@@ -193,8 +236,17 @@ function drawConnection(x1, y1, x2, y2, weight, bias, inputIndex) {
 function forwardPass(layerSizes, activation) {
     let outputs = [];
     let preActivations = [];
-    outputs.push([inputX, inputZ]);
-    preActivations.push([inputX, inputZ]);
+    // Use normalized inputs if training stored normalization stats
+    let inX = inputX, inZ = inputZ;
+    if (window.inputNorm && window.inputNorm.type === 'zscore' && Array.isArray(window.inputNorm.mean) && Array.isArray(window.inputNorm.std)) {
+        const m = window.inputNorm.mean, s = window.inputNorm.std;
+        const sx = (s[0] === 0 || !isFinite(s[0])) ? 1 : s[0];
+        const sz = (s[1] === 0 || !isFinite(s[1])) ? 1 : s[1];
+        inX = (inputX - m[0]) / sx;
+        inZ = (inputZ - m[1]) / sz;
+    }
+    outputs.push([inX, inZ]);
+    preActivations.push([inX, inZ]);
 
     // Validate weights and biases shape
     for (let l = 1; l < layerSizes.length; l++) {
@@ -354,7 +406,9 @@ function drawNetwork() {
             const y = (n + 1) * neuronSpacing;
             if (l === 0) {
                 const labels = ["X", "Z"];
-                drawInputNeuron(x, y, `${labels[n]}=${outputs[0][n]}`, n);
+                // Show raw input values in labels even if normalized internally
+                const rawVals = [inputX, inputZ];
+                drawInputNeuron(x, y, `${labels[n]}=${rawVals[n]}`, n);
             } else {
                 drawNeuron(x, y, activation, preActivations[l][n], outputs[l][n], l, n);
                 // If this is the output layer neuron, draw a large 'Y' above it

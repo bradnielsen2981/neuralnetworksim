@@ -3,7 +3,7 @@ let addPointMode = false;
 
 // Global UI state for mesh controls
 window.meshShadowsOn = false;
-window.meshColorIndex = 0;
+// Define available mesh colours first
 window.meshColors = [
     0xffff00, // yellow
     0x2980b9, // blue
@@ -12,6 +12,10 @@ window.meshColors = [
     0xe67e22, // orange
     0x27ae60  // green
 ];
+// Pick a random default mesh colour
+window.meshColorIndex = Math.floor(Math.random() * window.meshColors.length);
+// Ensure a valid fallback if randomization yields NaN
+if (!Number.isInteger(window.meshColorIndex) || window.meshColorIndex < 0) window.meshColorIndex = 0;
 
 // Helper to apply color and shadow changes to current or future prediction mesh
 window.applyPredictionMeshStyle = function applyPredictionMeshStyle() {

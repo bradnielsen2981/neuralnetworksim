@@ -107,6 +107,24 @@ a:hover, a:focus { color: var(--color-link-hover); }
   overflow-y: auto;
 }
 
+/* Points Table theming: use soft blue stripes and hover to match app palette */
+#points-table-container table {
+  border-color: var(--color-border) !important;
+  color: var(--color-text);
+}
+#points-table-container .table-striped tbody tr:nth-of-type(odd) {
+  /* Override Bootstrap’s accent var and ensure background applies */
+  --bs-table-accent-bg: #eaf2ff; /* soft blue */
+  background-color: #eaf2ff !important;
+}
+#points-table-container .table-hover tbody tr:hover {
+  background-color: #d9e7ff !important; /* slightly deeper blue on hover */
+}
+#points-table-container table td,
+#points-table-container table th {
+  border-color: var(--color-border) !important;
+}
+
 /* Remove rounded corners from all Bootstrap cards */
 .card {
   background: var(--color-surface);

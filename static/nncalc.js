@@ -39,9 +39,9 @@ function getLearningParams() {
     if (!isFinite(ep) || ep < 1) ep = 1;
     if (ep > 5000) { ep = 5000; if (epochsInput) epochsInput.value = String(ep); }
 
-    // Clamp learning rate to [0.001, 0.1]
+    // Clamp learning rate to [0.0001, 0.1]
     if (!isFinite(lr)) lr = 0.01;
-    if (lr < 0.001) { lr = 0.001; if (lrInput) lrInput.value = String(lr); }
+    if (lr < 0.0001) { lr = 0.0001; if (lrInput) lrInput.value = String(lr); }
     if (lr > 0.1) { lr = 0.1; if (lrInput) lrInput.value = String(lr); }
 
     // Clamp patience to [10, 500]
@@ -213,6 +213,33 @@ async function trainModelFromUI() {
     const xs = points.map(pt => [pt.x, pt.z]);
     const ys = points.map(pt => [pt.y]);
 
+    // Input normalization to stabilize sigmoid/tanh training
+    let normStats = null;
+    const useNorm = (activation === 'sigmoid' || activation === 'tanh');
+    if (useNorm) {
+        // compute mean and std per feature
+        const n = xs.length;
+        let sumX = 0, sumZ = 0;
+        for (const [x, z] of xs) { sumX += x; sumZ += z; }
+        const meanX = sumX / n;
+        const meanZ = sumZ / n;
+        let varX = 0, varZ = 0;
+        for (const [x, z] of xs) { varX += (x - meanX) ** 2; varZ += (z - meanZ) ** 2; }
+        const stdX = Math.sqrt(varX / Math.max(1, n - 1)) || 1;
+        const stdZ = Math.sqrt(varZ / Math.max(1, n - 1)) || 1;
+        normStats = { type: 'zscore', mean: [meanX, meanZ], std: [stdX, stdZ] };
+        // Persist for forward pass and mesh predictions
+        window.inputNorm = normStats;
+    } else {
+        // Clear any previous normalization so forward pass uses raw inputs
+        window.inputNorm = null;
+    }
+
+    // Apply normalization if needed
+    const xsTrain = (normStats)
+        ? xs.map(([x, z]) => [ (x - normStats.mean[0]) / normStats.std[0], (z - normStats.mean[1]) / normStats.std[1] ])
+        : xs;
+
     // Reset the training graph when starting a new training run
     if (typeof window.resetLossChart === 'function') {
         try { window.resetLossChart(); } catch (_) {}
@@ -327,7 +354,7 @@ async function trainModelFromUI() {
             }
         }
 
-        const xsTensor = tf.tensor2d(xs);
+        const xsTensor = tf.tensor2d(xsTrain);
         const ysTensor = tf.tensor2d(ys);
         const clipValue = 1.0; // clip-by-value threshold (tune to 0.5–5.0 as needed)
         const minDelta = (typeof earlyStopping === 'number' && isFinite(earlyStopping)) ? earlyStopping : 1e-4; // minimum improvement to reset patience
@@ -504,7 +531,11 @@ async function trainModelFromUI() {
             }
 
             // Perform batch prediction (single large batch)
-            const batchTensor = tf.tensor2d(batchInputs);
+            const batchTensor = tf.tensor2d(
+                (window.inputNorm && window.inputNorm.type === 'zscore')
+                    ? batchInputs.map(([x, z]) => [ (x - window.inputNorm.mean[0]) / window.inputNorm.std[0], (z - window.inputNorm.mean[1]) / window.inputNorm.std[1] ])
+                    : batchInputs
+            );
             const batchOutputs = await model.predict(batchTensor).array();
             batchTensor.dispose();
 
