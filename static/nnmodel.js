@@ -133,37 +133,11 @@ function drawInputNeuron(x, y, label, inputIndex) {
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 2;
     ctx.stroke();
-
-    // Split incoming label like 'X=val' into name and value
-    let name = inputIndex === 0 ? 'X' : 'Z';
-    let valStr = '';
-    if (typeof label === 'string') {
-        const eq = label.indexOf('=');
-        if (eq >= 0) {
-            const n = label.slice(0, eq).trim();
-            if (n) name = n;
-            valStr = label.slice(eq + 1).trim();
-        } else {
-            valStr = label.trim();
-        }
-    }
-    // Try to format numeric value to two decimals
-    const vNum = parseFloat(valStr);
-    if (isFinite(vNum)) {
-        valStr = vNum.toFixed(2);
-    }
-
-    // Draw the name above the circle
     ctx.fillStyle = '#000';
     ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.6))}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(name, x, y - neuronRadius - 6);
-
-    // Draw just the value inside the circle
     ctx.textBaseline = 'middle';
-    ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.55))}px sans-serif`;
-    ctx.fillText(valStr, x, y);
+    ctx.fillText(label, x, y);
 
     // Store position for click and hover detection
     inputNeuronPositions.push({x, y, radius: neuronRadius, index: inputIndex});
@@ -632,7 +606,7 @@ document.getElementById('resetButton').addEventListener('click', () => {
     window.initmethod = 'glorot';
     window.neuronCounts = [2];
     window.learningRate = 0.01;
-    window.momentum = 0;
+    window.momentum = 0.5;
     window.epochs = 100;
     window.earlyStopping = 0.01;
     window.patience = 50;

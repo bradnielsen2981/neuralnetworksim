@@ -487,6 +487,10 @@ p.mt-2.small.text-muted {
     background-color: royalblue !important; /* match Wave button */
     border-color: #000000 !important;
     color: #fff !important;
+    /* Size tweaks: +50% font, +5px top/bottom padding (~+10px total height) */
+    font-size: 1.5em;
+    padding-top: calc(0.375rem + 6px);
+    padding-bottom: calc(0.375rem + 6px);
 }
 
 /* Refine Train button hover: bright azure blue, no glow */
