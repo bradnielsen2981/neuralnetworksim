@@ -32,18 +32,23 @@
     <div class="col-md-8">
   <h1 class="fw-bold site-title">Neural Network Simulator</h1>
       <p>
-        A neural network uses gradient descent to curve-fit data by adjusting its weights and biases in order to minimize the loss function. This process is called <b>Back propagation</b>.
+        A neural network applies gradient descent to optimize its weights and biases, gradually refining them to reduce the loss function and achieve the best fit to the data. This process is known as <b>Backpropagation</b>.
       </p>
-      <p>
-        Place points in the 3d Graph below. Add neurons and hidden layers to the Neural Network. Adjust the Neural Network Parameters, when you are ready, click <b>Train</b>.
-      </p>
+      <div class="nn-instruction small home-instruction" role="alert">
+        <!-- Stacked icons: white solid fill under blue regular outline -->
+        <span class="home-hand-icon" aria-hidden="true">
+          <i class="fa-solid fa-hand-point-down hand-fill"></i>
+          <i class="fa-regular fa-hand-point-down hand-outline"></i>
+        </span>
+        Place points in the 3d Graph below. Add neurons and hidden layers to the Neural Network. Adjust the Neural Network Parameters, when you are ready, click Train.
+      </div>
     </div>
     <div class="col-md-4 d-flex flex-column">
   <button id="mode-toggle" class="btn btn-sm btn-primary mt-2 w-100" style="display:none;">Switch Mode</button>
   <div class="speech-bubble">
     <h4 class="points">Regression <i class="fa-solid fa-chart-line"></i></h4>
     <p id="mode-description" class="mb-2">
-      This Regression model trains on the X and Z values below to predict future Y values. Once training is completed, a surface is created by making predictions for each X,Z point on the plane.
+      This <b>regression</b> model trains on the X and Z values below to predict future Y values. Once training is completed, a surface is created by making Y-value predictions for each X,Z point on the plane.
     </p>
   </div>
 </div>

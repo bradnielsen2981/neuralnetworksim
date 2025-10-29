@@ -17,7 +17,7 @@
 body, html {
   height: 100%;
   margin: 0;
-  padding:0px;
+  padding:5px;
   font-family: sans-serif;
   background-color: #abcbff;
   color: var(--color-text);
@@ -517,30 +517,16 @@ p.mt-2.small.text-muted {
   padding: 12px 14px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.15);
   margin-top: 6px;
+  min-height:180px;
 }
 .speech-bubble a { color: #fff; }
+/* Remove the triangular pointer from the speech bubble */
+.speech-bubble:before,
 .speech-bubble:after {
-  content: "";
-  position: absolute;
-  top: 10px;
-  left: -12px;
-  width: 0;
-  height: 0;
-  border: 12px solid transparent;
-  border-right-color: #5478E4; /* match bubble background */
-  border-left: 0;
-  margin-top: 0;
-}
-.speech-bubble:before {
-  content: "";
-  position: absolute;
-  top: 9px;
-  left: -14px;
-  width: 0;
-  height: 0;
-  border: 14px solid transparent;
-  border-right-color: #000;
-  border-left: 0;
+  content: none !important;
+  border: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Make sure inner header has minimal margin to fit bubble nicely */
@@ -561,3 +547,66 @@ p.mt-2.small.text-muted {
 .param-help {
   color: #5478E4; /* same as speech bubble background */
 }
+
+.row.mb-3.visualiser {
+    margin-top: 10px;
+    margin-bottom: 2px !important;
+}
+
+p {
+  margin-top:1rem;
+    margin-bottom: 1rem;
+}
+
+/* Instruction block under neural network model */
+.nn-instruction {
+  margin: 12px;
+  padding: 8px 10px;
+  border: 1px solid #5478e4; /* soft blue border matching alerts */
+  background: #cdd7fb; /* light themed blue */
+  color: #0f172a; /* primary text */
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+.nn-instruction i { color: #4169e1; }
+
+/* Home instruction overrides: no horizontal margins, darker/more saturated background */
+.nn-instruction.home-instruction {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  background: #b5c7fa; /* ~10% darker, slightly more saturated than #cdd7fb */
+  min-height:63px;
+}
+
+/* Home instruction: make the hand icon solid white and larger */
+.nn-instruction .home-hand-icon {
+  position: relative;
+  display: inline-block;
+  width: 1.8rem;
+  height: 1.8rem;
+  margin-right: 10px;
+  animation: hand-bob 1.5s ease-in-out infinite;
+}
+.nn-instruction .home-hand-icon .hand-fill,
+.nn-instruction .home-hand-icon .hand-outline {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.nn-instruction .home-hand-icon .hand-fill { color: #ffffff; }
+.nn-instruction .home-hand-icon .hand-outline { color: #5478e4; }
+/* Tweak for better overlap on some browsers */
+.nn-instruction .home-hand-icon i { pointer-events: none; }
+
+/* Soft up-down animation for stacked hand icons */
+@keyframes hand-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nn-instruction .home-hand-icon { animation: none !important; }
+}
+

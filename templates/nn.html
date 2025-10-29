@@ -48,7 +48,13 @@
           <div id="canvasContainer">
             <canvas id="networkCanvas" style="width:100%;max-width:100%;border:1px solid #ccc;border-radius:4px;background:#fff;"></canvas>
           </div>
-          <p class="mt-2 small text-muted">For more complex patterns, a greater number of neurons and hidden layers are required. The number of Epochs must also be adjusted accordingly.</p>
+          <div class="nn-instruction small" role="alert">
+            <span class="home-hand-icon" aria-hidden="true">
+              <i class="fa-solid fa-hand-point-up hand-fill"></i>
+              <i class="fa-regular fa-hand-point-up hand-outline"></i>
+            </span>
+            Click on X or Z to change their values and see how Y is affected. Add more neurons and hidden layers to the network to better predict complex patterns.
+          </div>
         </div>
       </div>
     </div>
@@ -83,7 +89,7 @@
             </div>
             <div class="mb-2">
               <label for="epochs" class="form-label">Epochs
-                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="The number of passes through all the data whilst applying gradient descent to the model."></i>
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="The number of passes through all the data whilst applying backpropagation to the model."></i>
               </label>
               <input type="number" id="epochs" class="form-control" value="500" min="1" max="5000" step="1">
             </div>
