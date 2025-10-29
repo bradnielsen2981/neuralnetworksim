@@ -75,7 +75,7 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
                     case 'standard':
                         // Scaled normal per activation:
                         // ReLU -> He: std = sqrt(2/fan_in)
-                        // Sigmoid/TanH -> Glorot-like per request: std = sqrt(1/fan_in)
+                        // TanH -> Glorot-like per request: std = sqrt(1/fan_in)
                         {
                             const isRelu = (currentActivation === 'relu');
                             const std = Math.sqrt(isRelu ? (2 / Math.max(1, fan_in)) : (1 / Math.max(1, fan_in)));
@@ -97,7 +97,6 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
 //-------- Activation Functions --------//
 function activate(x, activation) {
     if (activation === 'relu') return Math.max(0, x);
-    if (activation === 'sigmoid') return 1 / (1 + Math.exp(-x));
     if (activation === 'tanh') return Math.tanh(x);
     return x;
 }
@@ -113,7 +112,6 @@ function mixRGBArray(a, b, t) {
 }
 function toCssRGB(arr) { return `rgb(${arr[0]}, ${arr[1]}, ${arr[2]})`; }
 function activationStrength(activation, outVal) {
-    if (activation === 'sigmoid') return clamp01(outVal);
     if (activation === 'tanh') return clamp01(Math.abs(outVal));
     // relu and others: compress using tanh to keep bounded
     return clamp01(Math.tanh(Math.max(0, outVal) / 2));
@@ -181,8 +179,6 @@ function drawNeuron(x, y, activation, inputVal, outputVal, layer, index) {
         if (activation === 'relu') {
             fx = t < 0 ? 0 : t * neuronRadius;
             fx -= neuronRadius * 0.2; // scale shift down
-        } else if (activation === 'sigmoid') {
-            fx = neuronRadius * 0.4 * (1 / (1 + Math.exp(-6 * t)) - 0.5);
         } else if (activation === 'tanh') {
             fx = neuronRadius * 0.4 * Math.tanh(4 * t * 0.9);
         }

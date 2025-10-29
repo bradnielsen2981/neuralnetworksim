@@ -88,6 +88,7 @@ async function trainModelFromUI() {
     const trainBtn = document.getElementById('train-btn');
     let trainingTimerStart = null;
     let trainingTimerId = null;
+    let cancelRequested = false; // user cancel flag
     function startTrainingTimer() {
         const elapsedEl = document.getElementById('training-elapsed');
         if (!elapsedEl) return;
@@ -145,10 +146,11 @@ async function trainModelFromUI() {
         // Close when clicking the X
         if (closeBtn) {
             closeBtn.onclick = () => {
+                cancelRequested = true; // request immediate stop
                 modal.style.display = 'none';
                 if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
+                // Train button can only be clicked again after popup is fully closed
                 if (trainBtn) trainBtn.disabled = false;
-                // stop timer on manual close
                 stopTrainingTimer();
             };
         }
@@ -156,10 +158,10 @@ async function trainModelFromUI() {
         // Close when clicking outside the dialog content (on overlay)
         modal.onclick = (e) => {
             if (e.target === modal) {
+                cancelRequested = true; // request immediate stop
                 modal.style.display = 'none';
                 if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
                 if (trainBtn) trainBtn.disabled = false;
-                // stop timer on manual close
                 stopTrainingTimer();
             }
         };
@@ -167,10 +169,10 @@ async function trainModelFromUI() {
         // Close on Escape key (store handler so we can remove it later)
         modal._escHandler = (e) => {
             if (e.key === 'Escape') {
+                cancelRequested = true; // request immediate stop
                 modal.style.display = 'none';
                 if (modal._escHandler) { document.removeEventListener('keydown', modal._escHandler); modal._escHandler = null; }
                 if (trainBtn) trainBtn.disabled = false;
-                // stop timer on manual close
                 stopTrainingTimer();
             }
         };
@@ -213,9 +215,9 @@ async function trainModelFromUI() {
     const xs = points.map(pt => [pt.x, pt.z]);
     const ys = points.map(pt => [pt.y]);
 
-    // Input normalization to stabilize sigmoid/tanh training
+    // Input normalization to stabilize tanh training
     let normStats = null;
-    const useNorm = (activation === 'sigmoid' || activation === 'tanh');
+    const useNorm = (activation === 'tanh');
     if (useNorm) {
         // compute mean and std per feature
         const n = xs.length;
@@ -363,6 +365,12 @@ async function trainModelFromUI() {
         let stopReason = null; // 'nan-inf' | 'patience' | 'early-threshold' | null
 
         for (let epoch = 0; epoch < epochs; epoch++) {
+            // Allow immediate user cancellation
+            if (cancelRequested) {
+                stoppedEarly = true;
+                stopReason = 'user-cancel';
+                break;
+            }
             // Compute loss and gradients w.r.t. model variables
             const vg = tf.variableGrads(() => {
                 const preds = model.predict(xsTensor);
@@ -453,6 +461,12 @@ async function trainModelFromUI() {
 
         xsTensor.dispose();
         ysTensor.dispose();
+
+        // If user canceled, skip post-training updates
+        if (stopReason === 'user-cancel') {
+            console.log('Training canceled by user.');
+            return; // leave modal state management to the close handler
+        }
 
         // Restore best weights if we captured any snapshot
         if (bestWeights) {
@@ -629,9 +643,8 @@ async function trainModelFromUI() {
         console.error('Training error:', err);
         alert('Training failed: ' + (err && err.message ? err.message : err));
     } finally {
-        // Ensure button is re-enabled, but do not hide the modal
-        if (trainBtn) trainBtn.disabled = false;
-        // Stop the timer when training ends
+        // Do not re-enable the Train button here; it should only be re-enabled once the popup is fully closed
+        // Stop the timer when training ends (if still running)
         stopTrainingTimer();
     }
 

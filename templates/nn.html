@@ -14,10 +14,9 @@
               </label>
               <label>
                 Activation
-                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Activation tells each neuron how much to fire. Types: ReLU — negatives become 0, positives pass through; Sigmoid — squeezes values to 0–1; TanH — squeezes values to -1–1 and centers around 0."></i>
+                <i class="fa-solid fa-circle-question ms-1 param-help" style="cursor:help;" title="Activation tells each neuron how much to fire. Types: ReLU — negatives become 0, positives pass through; TanH — squeezes values to -1–1 and centers around 0."></i>
                 <select id="activation">
                   <option value="relu">ReLU</option>
-                  <option value="sigmoid">Sigmoid</option>
                   <option value="tanh">TanH</option>
                 </select>
               </label>
@@ -152,17 +151,17 @@
       lrInput.addEventListener('blur', clampLR);
     }
 
-    // When Activation is TanH or Sigmoid, set LR to 0.001
+    // When Activation is TanH, set LR to 0.001
     const activationSelect = document.getElementById('activation');
     if (activationSelect && lrInput) {
       const maybeAdjustLR = () => {
         const val = String(activationSelect.value || '').toLowerCase();
-        if (val === 'tanh' || val === 'sigmoid') {
+        if (val === 'tanh') {
           lrInput.value = '0.001';
         }
       };
       activationSelect.addEventListener('change', maybeAdjustLR);
-      // Also run once on load to apply if default is TanH/Sigmoid
+      // Also run once on load to apply if default is TanH
       maybeAdjustLR();
     }
 
