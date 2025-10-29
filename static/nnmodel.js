@@ -48,8 +48,8 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
     window.biases = [];
     // Determine current activation to choose proper scaling for 'standard'
     const currentActivation = (typeof window !== 'undefined' && window.activationtype)
-        ? window.activationtype
-        : (document.getElementById('activation') ? document.getElementById('activation').value : 'relu');
+        ? String(window.activationtype).toLowerCase()
+        : (document.getElementById('activation') ? String(document.getElementById('activation').value).toLowerCase() : 'relu');
 
     for (let l = 0; l < layerSizes.length - 1; l++) {
         window.weights.push([]);
@@ -96,8 +96,9 @@ function initializeNetwork(hiddenNeuronCounts, initType) {
 
 //-------- Activation Functions --------//
 function activate(x, activation) {
-    if (activation === 'relu') return Math.max(0, x);
-    if (activation === 'tanh') return Math.tanh(x);
+    const a = (activation || '').toLowerCase();
+    if (a === 'relu') return Math.max(0, x);
+    if (a === 'tanh') return Math.tanh(x);
     return x;
 }
 
@@ -112,7 +113,8 @@ function mixRGBArray(a, b, t) {
 }
 function toCssRGB(arr) { return `rgb(${arr[0]}, ${arr[1]}, ${arr[2]})`; }
 function activationStrength(activation, outVal) {
-    if (activation === 'tanh') return clamp01(Math.abs(outVal));
+    const a = (activation || '').toLowerCase();
+    if (a === 'tanh') return clamp01(Math.abs(outVal));
     // relu and others: compress using tanh to keep bounded
     return clamp01(Math.tanh(Math.max(0, outVal) / 2));
 }
@@ -131,11 +133,37 @@ function drawInputNeuron(x, y, label, inputIndex) {
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    // Split incoming label like 'X=val' into name and value
+    let name = inputIndex === 0 ? 'X' : 'Z';
+    let valStr = '';
+    if (typeof label === 'string') {
+        const eq = label.indexOf('=');
+        if (eq >= 0) {
+            const n = label.slice(0, eq).trim();
+            if (n) name = n;
+            valStr = label.slice(eq + 1).trim();
+        } else {
+            valStr = label.trim();
+        }
+    }
+    // Try to format numeric value to two decimals
+    const vNum = parseFloat(valStr);
+    if (isFinite(vNum)) {
+        valStr = vNum.toFixed(2);
+    }
+
+    // Draw the name above the circle
     ctx.fillStyle = '#000';
     ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.6))}px sans-serif`;
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(name, x, y - neuronRadius - 6);
+
+    // Draw just the value inside the circle
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, x, y);
+    ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.55))}px sans-serif`;
+    ctx.fillText(valStr, x, y);
 
     // Store position for click and hover detection
     inputNeuronPositions.push({x, y, radius: neuronRadius, index: inputIndex});
@@ -153,7 +181,8 @@ function drawNeuron(x, y, activation, inputVal, outputVal, layer, index) {
     const redTint = [231, 76, 60];        // reddish for strong activation
     const isHovered = (hoveredNeuron.layer === layer && hoveredNeuron.index === index);
 
-    let s = activationStrength(activation, outputVal); // 0..1 strength
+    const act = (activation || '').toLowerCase();
+    let s = activationStrength(act, outputVal); // 0..1 strength
     let fillRGB = baseBlue.slice();
     // Push weak activations bluer (and only a touch greyer)
     fillRGB = mixRGBArray(fillRGB, blueDeep, (1 - s) * 0.30);
@@ -176,11 +205,14 @@ function drawNeuron(x, y, activation, inputVal, outputVal, layer, index) {
     for (let i = -neuronRadius; i <= neuronRadius; i += step) {
         let fx;
         const t = i / neuronRadius;
-        if (activation === 'relu') {
+        if (act === 'relu') {
             fx = t < 0 ? 0 : t * neuronRadius;
             fx -= neuronRadius * 0.2; // scale shift down
-        } else if (activation === 'tanh') {
+        } else if (act === 'tanh') {
             fx = neuronRadius * 0.4 * Math.tanh(4 * t * 0.9);
+        } else {
+            // default: small linear guide
+            fx = neuronRadius * 0.2 * t;
         }
         points.push({ x: i, y: -fx });
     }
@@ -190,15 +222,46 @@ function drawNeuron(x, y, activation, inputVal, outputVal, layer, index) {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Input/Output numbers only, font color white
+    // Input/Output numbers only, adaptive precision for small values
+    const fmt = (v) => {
+        const av = Math.abs(v);
+        return av >= 0.01 ? v.toFixed(2) : v.toFixed(4);
+    };
     ctx.fillStyle = '#fff';
     ctx.font = `${Math.max(8, Math.floor(neuronRadius * 0.45))}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${inputVal.toFixed(2)}`, x - neuronRadius * 0.5 + 8, y - neuronRadius * 0.5 + 3);
-    ctx.fillText(`${outputVal.toFixed(2)}`, x + neuronRadius * 0.5 - 12, y + neuronRadius * 0.5 + 3);
+    ctx.fillText(`${fmt(inputVal)}`, x - neuronRadius * 0.5 + 8, y - neuronRadius * 0.5 + 3);
+    ctx.fillText(`${fmt(outputVal)}`, x + neuronRadius * 0.5 - 12, y + neuronRadius * 0.5 + 3);
 
     // Store position for hover detection
+    neuronPositions.push({ x, y, radius: neuronRadius, layer, index });
+}
+
+// Draw a dedicated output neuron: 'Y' label above and numeric value inside
+function drawOutputNeuron(x, y, value, layer, index) {
+    ctx.beginPath();
+    ctx.arc(x, y, neuronRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label above the circle: 'Y'
+    ctx.fillStyle = '#000';
+    ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.6))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Y', x, y - neuronRadius - 6);
+
+    // Centered numeric value only (two decimals) inside the circle
+    const fmt = (v) => v.toFixed(2);
+    ctx.textBaseline = 'middle';
+    ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.55))}px sans-serif`;
+    ctx.fillText(`${fmt(value)}`, x, y);
+
+    // Track for hover detection consistency
     neuronPositions.push({ x, y, radius: neuronRadius, layer, index });
 }
 
@@ -261,6 +324,7 @@ function forwardPass(layerSizes, activation) {
         }
         let layerOutput = [];
         let layerPreAct = [];
+        const isOutputLayer = (l === layerSizes.length - 1);
         for (let i = 0; i < layerSizes[l]; i++) {
             let sum = window.biases[l - 1][i];
             if (!window.weights[l - 1][i] || window.weights[l - 1][i].length !== layerSizes[l - 1]) {
@@ -272,7 +336,9 @@ function forwardPass(layerSizes, activation) {
                 sum += outputs[l - 1][j] * window.weights[l - 1][i][j];
             }
             layerPreAct.push(sum);
-            layerOutput.push(activate(sum, activation));
+            // No activation on output layer (linear output)
+            const outVal = isOutputLayer ? sum : activate(sum, activation);
+            layerOutput.push(outVal);
         }
         preActivations.push(layerPreAct);
         outputs.push(layerOutput);
@@ -328,7 +394,7 @@ function drawNetwork() {
 
     // Use global window variables for network configuration
     const numHiddenLayers = window.layernumber !== undefined ? window.layernumber : Math.min(4, Math.max(1, parseInt(document.getElementById('layers').value)));
-    const activation = window.activationtype !== undefined ? window.activationtype : document.getElementById('activation').value;
+    const activation = (window.activationtype !== undefined ? String(window.activationtype) : String(document.getElementById('activation').value)).toLowerCase();
 
     // Build layerSizes from window.neuronCounts
     const layerSizes = [2, ...window.neuronCounts, 1];
@@ -405,16 +471,12 @@ function drawNetwork() {
                 // Show raw input values in labels even if normalized internally
                 const rawVals = [inputX, inputZ];
                 drawInputNeuron(x, y, `${labels[n]}=${rawVals[n]}`, n);
+            } else if (l === totalLayers - 1) {
+                // Output neuron: white circle with Y inside
+                const yVal = outputs[l][n];
+                drawOutputNeuron(x, y, yVal, l, n);
             } else {
                 drawNeuron(x, y, activation, preActivations[l][n], outputs[l][n], l, n);
-                // If this is the output layer neuron, draw a large 'Y' above it
-                if (l === totalLayers - 1) {
-                    ctx.fillStyle = '#000';
-                    ctx.font = `${Math.max(10, Math.floor(neuronRadius * 0.6))}px sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'bottom';
-                    ctx.fillText('Y', x, y - neuronRadius - 6);
-                }
             }
         }
     }
@@ -444,6 +506,7 @@ canvas.addEventListener('click', (event) => {
                         window.z = parsedValue;
                         updated = true;
                     }
+
                     // After setting, do a forward pass and redraw
                     drawNetwork();
                     if (updated) {
@@ -528,7 +591,7 @@ document.getElementById('layers').addEventListener('input', function() {
     drawNetwork();
 });
 document.getElementById('activation').addEventListener('change', function() {
-    window.activationtype = document.getElementById('activation').value;
+    window.activationtype = String(document.getElementById('activation').value).toLowerCase();
     initializeNetwork(window.neuronCounts, window.initmethod);
     drawNetwork();
 });
@@ -584,7 +647,7 @@ document.getElementById('resetButton').addEventListener('click', () => {
             if (window.predictionMesh.geometry) window.predictionMesh.geometry.dispose();
             if (window.predictionMesh.material) window.predictionMesh.material.dispose();
         } catch (e) {
-            console.warn('Error removing prediction mesh:', e);
+            /* removed console warn to keep logs clean */
         }
         window.predictionMesh = null;
     }

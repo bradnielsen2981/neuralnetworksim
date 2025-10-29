@@ -476,7 +476,7 @@ function generateRandomPoints() {
         count++;
     }
     if (attempts >= maxAttempts && count < 16) {
-        console.warn(`Only generated ${count} random points due to min-distance constraint of ${minDistance}.`);
+        // console.warn(`Only generated ${count} random points due to min-distance constraint of ${minDistance}.`);
     }
     renderPointsTable();
 }

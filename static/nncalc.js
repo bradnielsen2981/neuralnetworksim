@@ -71,11 +71,10 @@ async function trainModelFromUI() {
             if (window.predictionMesh.geometry) window.predictionMesh.geometry.dispose();
             if (window.predictionMesh.material) window.predictionMesh.material.dispose();
         } catch (e) {
-            console.warn('Error removing prediction mesh at Train click:', e);
+            // log suppressed
         }
         window.predictionMesh = null;
     }
-    console.log('Train button clicked');
     const neuronCounts = getNetworkStructure();
     const activation = getActivation();
     const { learningRate, momentum, epochs, patience, earlyStopping } = getLearningParams();
@@ -207,7 +206,7 @@ async function trainModelFromUI() {
             if (window.predictionMesh.geometry) window.predictionMesh.geometry.dispose();
             if (window.predictionMesh.material) window.predictionMesh.material.dispose();
         } catch (e) {
-            console.warn('Error removing prediction mesh before training:', e);
+            // log suppressed
         }
         window.predictionMesh = null;
     }
@@ -282,18 +281,8 @@ async function trainModelFromUI() {
             model.add(tf.layers.dense({ units: 1, inputShape: [2] }));
         }
 
-        // === Pre-load diagnostic ===
-        console.log("=== Pre-Load Diagnostic ===");
-        if (Array.isArray(window.weights) && Array.isArray(window.biases)) {
-            window.weights.forEach((w, idx) => {
-                console.log(`Layer ${idx} stored weight shape: [${w.length}, ${w[0]?.length}]`);
-                console.log(`Sample weights:`, w.slice(0, 3));
-            });
-            window.biases.forEach((b, idx) => {
-                console.log(`Layer ${idx} stored bias length: ${b.length}`);
-                console.log(`Sample biases:`, b.slice(0, 3));
-            });
-        }
+        // === Pre-Load Diagnostic ===
+        // diagnostics suppressed
 
         // === Load stored weights safely ===
         if (Array.isArray(window.weights) && Array.isArray(window.biases)) {
@@ -307,9 +296,6 @@ async function trainModelFromUI() {
                     let w = window.weights[i] ? tf.transpose(tf.tensor(window.weights[i])) : currentWeights[0];
                     let b = window.biases[i] ? tf.tensor(window.biases[i]) : currentWeights[1];
 
-                    console.log(`Layer ${i} applying weight shape:`, w.shape);
-                    console.log(`Layer ${i} applying bias shape:`, b.shape);
-
                     const weightShapeMatches =
                         w.shape.length === currentWeights[0].shape.length &&
                         w.shape.every((dim, idx) => dim === currentWeights[0].shape[idx]);
@@ -322,8 +308,6 @@ async function trainModelFromUI() {
                         layer.setWeights([w, b]);
                     } else {
                         alert(`Network weights/biases shape mismatch for layer ${i}. Using default weights.`);
-                        console.log("Expected weights:", currentWeights[0].shape, "Biases:", currentWeights[1].shape);
-                        console.log("Got weights:", w.shape, "Biases:", b.shape);
                     }
                 }
             }
@@ -351,7 +335,7 @@ async function trainModelFromUI() {
                             lw.forEach(t => t && typeof t.dispose === 'function' && t.dispose());
                         }
                     }
-                } catch (e) { console.warn('Error disposing bestWeights:', e); }
+                } catch (e) { /* suppress warn */ }
                 bestWeights = null;
             }
         }
@@ -389,7 +373,6 @@ async function trainModelFromUI() {
 
             // NaN/Inf guard
             if (!isFinite(loss)) {
-                console.warn('NaN/Inf loss detected at epoch', epoch, '— stopping training.');
                 const modalBody = document.getElementById('training-modal-body');
                 if (modalBody) {
                     const warn = document.createElement('div');
@@ -464,7 +447,6 @@ async function trainModelFromUI() {
 
         // If user canceled, skip post-training updates
         if (stopReason === 'user-cancel') {
-            console.log('Training canceled by user.');
             return; // leave modal state management to the close handler
         }
 
@@ -480,8 +462,6 @@ async function trainModelFromUI() {
                 disposeBestWeights();
             }
         }
-        // Training finished — avoid alerting the user to prevent interruption.
-        console.log('Training complete.');
 
         // === Save weights for drawNetwork (after potential restore) ===
         window.weights = [];
@@ -494,8 +474,6 @@ async function trainModelFromUI() {
                 const bArray = weights[1].arraySync();
                 window.weights.push(wArray);
                 window.biases.push(bArray);
-
-                console.log("Saved Layer weights shape:", wArray.length, "x", wArray[0]?.length, "Bias shape:", bArray.length);
             }
         }
 
@@ -516,7 +494,6 @@ async function trainModelFromUI() {
 
         // === Generate prediction mesh for Three.js ===
         if (window.predictionMesh && window.scene) {
-            console.log('Removing existing prediction mesh.');
             window.scene.remove(window.predictionMesh);
             window.predictionMesh.geometry.dispose();
             window.predictionMesh.material.dispose();
@@ -527,7 +504,6 @@ async function trainModelFromUI() {
         const THREE_NS = (typeof window !== 'undefined' && window.THREE) ? window.THREE : (typeof THREE !== 'undefined' ? THREE : null);
 
         if (window.scene && THREE_NS) {
-            console.log('Generating new prediction mesh with batching.');
             const step = 0.5; // finer grid for a smoother surface
             const xMin = -25, xMax = 25, zMin = -25, zMax = 25;
             const xCount = Math.floor((xMax - xMin) / step) + 1;
@@ -555,7 +531,6 @@ async function trainModelFromUI() {
 
             const vertCount = xCount * zCount;
             const positions = new Float32Array(vertCount * 3);
-            // const colors = new Float32Array(vertCount * 3); // no longer needed when using solid color material
 
             // Fill typed arrays
             for (let i = 0; i < vertCount; i++) {
@@ -566,12 +541,9 @@ async function trainModelFromUI() {
                 positions[idx3] = x;
                 positions[idx3 + 1] = y;
                 positions[idx3 + 2] = z;
-                // kept for reference when vertex colors are desired
-                // colors[idx3] = 0.0; colors[idx3 + 1] = 1.0; colors[idx3 + 2] = 0.0;
             }
 
             geometry.setAttribute('position', new THREE_NS.Float32BufferAttribute(positions, 3));
-            // geometry.setAttribute('color', new THREE_NS.Float32BufferAttribute(colors, 3));
 
             const indices = [];
             for (let xi = 0; xi < xCount - 1; xi++) {
@@ -585,8 +557,6 @@ async function trainModelFromUI() {
                 }
             }
             geometry.setIndex(indices);
-            // MeshBasicMaterial doesn't use normals; skip computing to save time
-            // geometry.computeVertexNormals();
             try { geometry.computeBoundingSphere(); } catch (_) {}
 
             // Start with a solid color so we can cycle colours easily; default from global selection
@@ -604,14 +574,6 @@ async function trainModelFromUI() {
             // Apply any pending style (shadows or updated colour)
             if (typeof window.applyPredictionMeshStyle === 'function') {
                 try { window.applyPredictionMeshStyle(); } catch (_) {}
-            }
-
-            console.log('Prediction mesh added to scene.');
-
-            // Log camera position and target
-            if (window.camera) {
-                console.log('Camera position:', window.camera.position);
-                console.log('Camera target:', window.controls.target);
             }
         }
 
@@ -640,7 +602,6 @@ async function trainModelFromUI() {
             }
         }
     } catch (err) {
-        console.error('Training error:', err);
         alert('Training failed: ' + (err && err.message ? err.message : err));
     } finally {
         // Do not re-enable the Train button here; it should only be re-enabled once the popup is fully closed
