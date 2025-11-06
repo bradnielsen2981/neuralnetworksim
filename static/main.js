@@ -236,7 +236,7 @@ let activeSphere = null;        // sphere currently being adjusted (or null)
 let isAdjustingHeight = false;  // true after first click, before final click
 let startMouseY = 0;            // starting mouse Y for height drag
 let baseY = 0;                  // initial Y when height adjustment started
-const heightSensitivity = 0.02; // adjust to taste (pixels -> units)
+const heightSensitivity = 0.06; // increased sensitivity (pixels -> units)
 
 // Table body (optional; will be ignored if not present)
 const tableBody = document.getElementById('points-table-body');
@@ -463,8 +463,8 @@ function generateRandomPoints() {
         if (tooClose) continue;
 
         usedXZ.add(key);
-    // y in [-5, 5]
-    const y = Math.random() * 10 - 5;
+        // y in [-10, 10]
+        const y = Math.random() * 20 - 10;
         points.push({ x, y, z, class: 'Yellow' });
         // Add sphere
         const sphere = new THREE.Mesh(

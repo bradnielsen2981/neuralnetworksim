@@ -158,11 +158,11 @@ function drawNeuron(x, y, activation, inputVal, outputVal, layer, index) {
     const act = (activation || '').toLowerCase();
     let s = activationStrength(act, outputVal); // 0..1 strength
     let fillRGB = baseBlue.slice();
-    // Push weak activations bluer (and only a touch greyer)
-    fillRGB = mixRGBArray(fillRGB, blueDeep, (1 - s) * 0.30);
-    fillRGB = mixRGBArray(fillRGB, greyTint, (1 - s) * 0.10);
-    // Make strong activations more red than before
-    fillRGB = mixRGBArray(fillRGB, redTint, s * 0.50);
+    // Push weak activations bluer (slightly reduced influence)
+    fillRGB = mixRGBArray(fillRGB, blueDeep, (1 - s) * 0.25);
+    fillRGB = mixRGBArray(fillRGB, greyTint, (1 - s) * 0.08);
+    // Stronger red tint for strong activation
+    fillRGB = mixRGBArray(fillRGB, redTint, s * 0.85);
     if (isHovered) {
         fillRGB = mixRGBArray(fillRGB, [255, 255, 255], 0.12);
     }
